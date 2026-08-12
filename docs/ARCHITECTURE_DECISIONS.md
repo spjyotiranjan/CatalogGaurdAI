@@ -72,6 +72,10 @@ Private original files are immutable, accessed only through scoped short-lived U
 
 Every request, job, callback, model call, audit event, and user-visible error carries the same correlation ID. Structured events include service, operation, safe outcome code, duration, actor type, and available feed/product identifiers. Trace context uses OpenTelemetry; centralized collection is Grafana Loki. Do not log complete private payloads, secrets, tokens, or prompts.
 
+### D-011: Phase-one authentication audit subjects
+
+The entity workbook's initial `AUDIT_LOG.entityType` enum omits authentication, user, and category subjects even though backend rules `AUTH-06` and `AUD-10` require those events. Extend the enum compatibly with `AUTH`, `USER`, and `CATEGORY`. `entityId` remains required for identified entity events, but may be null only for a pre-identity `AUTH` event such as a failed login for an unknown or invalid account. Such events use a `SYSTEM` actor, a non-empty `actorService`, a correlation ID, and sanitized metadata such as a one-way email fingerprint; they never store the submitted email, password, token, or session contents.
+
 ## Shared payload shapes
 
 The code should define these as versioned schemas in both services. Fields may be expanded only with a compatible versioned contract.

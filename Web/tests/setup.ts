@@ -1,0 +1,9 @@
+process.env.CATALOGGUARD_ENVIRONMENT = "test";
+process.env.CATALOGGUARD_SERVICE_NAME = "catalogguard-web";
+process.env.CATALOGGUARD_APP_VERSION = "test";
+process.env.MONGODB_URI = "mongodb://127.0.0.1:27017/catalogguard_test";
+process.env.MONGODB_DB_NAME = "catalogguard_test";
+process.env.AUTH_SECRET = "test-only-auth-secret-with-at-least-32-characters";
+process.env.AUTH_URL = "http://localhost:3000";
+process.env.AUTH_TRUST_HOST = "true";
+process.env.LOG_LEVEL = "silent";
