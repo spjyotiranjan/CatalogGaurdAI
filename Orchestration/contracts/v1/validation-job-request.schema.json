@@ -2,38 +2,46 @@
   "$defs": {
     "FeedReferenceV1": {
       "additionalProperties": false,
+      "description": "Immutable private CSV identity granted by the trusted Web job.",
       "properties": {
         "checksum": {
+          "description": "Expected lowercase SHA-256 content checksum.",
           "pattern": "^[a-f0-9]{64}$",
           "title": "Checksum",
           "type": "string"
         },
         "feedType": {
           "const": "PRODUCT_LISTING",
+          "description": "Enabled MVP feed purpose.",
           "title": "Feedtype",
           "type": "string"
         },
         "feedUploadId": {
+          "description": "Web-owned feed upload identifier.",
           "pattern": "^[a-fA-F0-9]{24}$",
           "title": "Feeduploadid",
           "type": "string"
         },
         "fileType": {
           "const": "CSV",
+          "description": "Enabled MVP input format.",
           "title": "Filetype",
           "type": "string"
         },
         "mappingVersion": {
           "const": "catalog-map/v1",
+          "description": "Versioned source-to-candidate field mapping.",
           "title": "Mappingversion",
           "type": "string"
         },
         "sellerId": {
+          "description": "Trusted Web-owned seller scope.",
           "pattern": "^[a-fA-F0-9]{24}$",
           "title": "Sellerid",
           "type": "string"
         },
         "storageObjectKey": {
+          "description": "Scoped private object key; never a public or seller-provided URL.",
           "maxLength": 512,
           "minLength": 1,
           "pattern": "^[^\\x00-\\x1f]+$",
@@ -55,8 +63,10 @@
     },
     "RequestExecutionMetadata": {
       "additionalProperties": false,
+      "description": "Trusted Web execution identity carried by a validation-job request.",
       "properties": {
         "actorService": {
+          "description": "Service identity that must match the authenticated caller.",
           "maxLength": 80,
           "minLength": 1,
           "title": "Actorservice",
@@ -64,10 +74,12 @@
         },
         "actorType": {
           "const": "SYSTEM",
+          "description": "Internal service actor type.",
           "title": "Actortype",
           "type": "string"
         },
         "correlationId": {
+          "description": "End-to-end trace identifier.",
           "format": "uuid",
           "title": "Correlationid",
           "type": "string"
@@ -84,9 +96,11 @@
   },
   "$id": "https://catalogguard.local/contracts/v1/validation-job-request.schema.json",
   "additionalProperties": false,
+  "description": "Strict authenticated Web-to-Orchestration validation-job contract.",
   "properties": {
     "contractVersion": {
       "const": "v1",
+      "description": "Transport contract version.",
       "title": "Contractversion",
       "type": "string"
     },
@@ -97,12 +111,14 @@
       "$ref": "#/$defs/FeedReferenceV1"
     },
     "idempotencyKey": {
+      "description": "Stable key binding one canonical request to one logical job.",
       "maxLength": 128,
       "minLength": 1,
       "title": "Idempotencykey",
       "type": "string"
     },
     "jobId": {
+      "description": "Stable logical validation-job identifier.",
       "format": "uuid",
       "title": "Jobid",
       "type": "string"

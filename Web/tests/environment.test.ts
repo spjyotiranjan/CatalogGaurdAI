@@ -10,6 +10,7 @@ const originalEnvironment = {
   AUTH_SECRET: process.env.AUTH_SECRET,
   AUTH_URL: process.env.AUTH_URL,
   AUTH_TRUST_HOST: process.env.AUTH_TRUST_HOST,
+  API_DOCS_ENABLED: process.env.API_DOCS_ENABLED,
 };
 
 afterEach(() => {
@@ -17,6 +18,7 @@ afterEach(() => {
   process.env.AUTH_SECRET = originalEnvironment.AUTH_SECRET;
   process.env.AUTH_URL = originalEnvironment.AUTH_URL;
   process.env.AUTH_TRUST_HOST = originalEnvironment.AUTH_TRUST_HOST;
+  process.env.API_DOCS_ENABLED = originalEnvironment.API_DOCS_ENABLED;
   resetEnvironmentForTests();
 });
 
@@ -26,6 +28,7 @@ describe("environment validation", () => {
       CATALOGGUARD_ENVIRONMENT: "test",
       AUTH_URL: "http://localhost:3000",
       AUTH_TRUST_HOST: true,
+      API_DOCS_ENABLED: true,
     });
   });
 
@@ -46,5 +49,14 @@ describe("environment validation", () => {
     resetEnvironmentForTests();
     process.env.AUTH_TRUST_HOST = "false";
     expect(() => getEnvironment()).toThrow();
+  });
+
+  it("disables API documentation by default in production", () => {
+    resetEnvironmentForTests();
+    process.env.CATALOGGUARD_ENVIRONMENT = "production";
+    process.env.AUTH_URL = "https://catalog.example";
+    delete process.env.API_DOCS_ENABLED;
+
+    expect(getEnvironment().API_DOCS_ENABLED).toBe(false);
   });
 });
