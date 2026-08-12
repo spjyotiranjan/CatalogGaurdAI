@@ -1,0 +1,13 @@
+{
+  "body": "{\"contractVersion\":\"v1\"}",
+  "bodySha256": "6ec67f9fc1beff0bfe95b0e646935d77af9c0f64b19fb28161235a2596760fd1",
+  "keyVersion": "orchestration-k1",
+  "method": "POST",
+  "nonce": "11111111-1111-4111-8111-111111111111",
+  "path": "/api/internal/validation-results",
+  "secret": "callback-test-secret-at-least-32-characters",
+  "serviceId": "validation-orchestrator",
+  "signature": "96940d226b8dad4d8034aae4cb98a8f25e1baed15db5510e2ef5909d8ab83c5c",
+  "timestamp": 1786520000,
+  "version": "v1"
+}

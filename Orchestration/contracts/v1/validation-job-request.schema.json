@@ -1,0 +1,120 @@
+{
+  "$defs": {
+    "FeedReferenceV1": {
+      "additionalProperties": false,
+      "properties": {
+        "checksum": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Checksum",
+          "type": "string"
+        },
+        "feedType": {
+          "const": "PRODUCT_LISTING",
+          "title": "Feedtype",
+          "type": "string"
+        },
+        "feedUploadId": {
+          "pattern": "^[a-fA-F0-9]{24}$",
+          "title": "Feeduploadid",
+          "type": "string"
+        },
+        "fileType": {
+          "const": "CSV",
+          "title": "Filetype",
+          "type": "string"
+        },
+        "mappingVersion": {
+          "const": "catalog-map/v1",
+          "title": "Mappingversion",
+          "type": "string"
+        },
+        "sellerId": {
+          "pattern": "^[a-fA-F0-9]{24}$",
+          "title": "Sellerid",
+          "type": "string"
+        },
+        "storageObjectKey": {
+          "maxLength": 512,
+          "minLength": 1,
+          "pattern": "^[^\\x00-\\x1f]+$",
+          "title": "Storageobjectkey",
+          "type": "string"
+        }
+      },
+      "required": [
+        "feedUploadId",
+        "sellerId",
+        "fileType",
+        "feedType",
+        "checksum",
+        "storageObjectKey",
+        "mappingVersion"
+      ],
+      "title": "FeedReferenceV1",
+      "type": "object"
+    },
+    "RequestExecutionMetadata": {
+      "additionalProperties": false,
+      "properties": {
+        "actorService": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Actorservice",
+          "type": "string"
+        },
+        "actorType": {
+          "const": "SYSTEM",
+          "title": "Actortype",
+          "type": "string"
+        },
+        "correlationId": {
+          "format": "uuid",
+          "title": "Correlationid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "correlationId",
+        "actorType",
+        "actorService"
+      ],
+      "title": "RequestExecutionMetadata",
+      "type": "object"
+    }
+  },
+  "$id": "https://catalogguard.local/contracts/v1/validation-job-request.schema.json",
+  "additionalProperties": false,
+  "properties": {
+    "contractVersion": {
+      "const": "v1",
+      "title": "Contractversion",
+      "type": "string"
+    },
+    "execution": {
+      "$ref": "#/$defs/RequestExecutionMetadata"
+    },
+    "feed": {
+      "$ref": "#/$defs/FeedReferenceV1"
+    },
+    "idempotencyKey": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Idempotencykey",
+      "type": "string"
+    },
+    "jobId": {
+      "format": "uuid",
+      "title": "Jobid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "contractVersion",
+    "jobId",
+    "idempotencyKey",
+    "feed",
+    "execution"
+  ],
+  "title": "ValidationJobRequestV1",
+  "type": "object"
+}
