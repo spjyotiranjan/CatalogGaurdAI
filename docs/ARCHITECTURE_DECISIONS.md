@@ -7,7 +7,7 @@ This register turns the supplied designs into implementation decisions. It is th
 ```text
 Browser
   -> Next.js Web BFF
-       -> private object storage
+       -> private Cloudflare R2 object storage
        -> MongoDB canonical data and audit trail
        -> durable validation-job dispatch
   -> FastAPI Orchestration
@@ -83,6 +83,20 @@ The entity workbook requires `VALIDATION_ISSUE.productRecordId`, but Orchestrati
 Web-to-Orchestration jobs and Orchestration-to-Web callbacks use the same v1 HMAC-SHA256 message-authentication format. Required headers are `X-CatalogGuard-Key-Version`, `X-CatalogGuard-Service`, `X-CatalogGuard-Timestamp` as Unix seconds, `X-CatalogGuard-Nonce` as a UUID, and `X-CatalogGuard-Signature` as lowercase hexadecimal. The signed canonical bytes are the UTF-8 encoding of `v1\n{keyVersion}\n{serviceId}\n{timestamp}\n{nonce}\n{HTTP_METHOD}\n{path}\n{sha256(body)}`. Verifiers compare signatures in constant time, allow no more than five minutes of clock skew, and persist accepted `(serviceId, nonce)` pairs for at least the replay window. A nonce replay, stale timestamp, unknown service/key version, malformed header, or bad signature is rejected before domain processing. The key-version header enables controlled secret rotation outside the payload contract; secrets and signatures are never logged.
 
 `ValidationJobRequest v1` identity fields (`contractVersion`, `jobId`, `idempotencyKey`, feed/seller/checksum identity, and execution context) are immutable after acceptance. Reusing an idempotency key with byte-identical canonical request content returns the existing logical job; reusing it with different content is a conflict. `PENDING`, `PROCESSING`, `COMPLETED`, `FAILED`, and `CANCELLED` are operational job states. Callback retry policy is bounded exponential backoff: schema/authentication/identity `4xx` responses are permanent, `408`, `429`, `5xx`, network failures, and timeouts are retryable, and the exact result identity and payload are retained across attempts.
+
+### D-013: Cloudflare R2 private feed storage
+
+Cloudflare R2 is the private-object store for every real catalog-feed workflow, including local development and production. There are exactly two isolated, non-public buckets: one local-development bucket selected by `.env.local` and one production bucket selected by `.env.prod`. Both services must select the bucket through server-only environment configuration; bucket names and credentials are never hard-coded or committed. `.env.local` and `.env.prod` must never point to the same bucket, and startup must fail when a non-test environment has no R2 configuration.
+
+Web owns upload coordination, immutable object metadata, checksum recording, lifecycle actions, and authorization-gated short-lived download access. Web persists the R2 object key before dispatch and sends only that scoped key—not a public or seller-supplied URL—in `ValidationJobRequest v1`. Orchestration receives read-only access to the specific R2 object granted by the trusted job, enforces the configured bucket/key scope, and rechecks size and checksum before parsing. R2 credentials, endpoints, bucket names, object keys, and signed URLs are server-only configuration and must not appear in browser payloads, logs, errors, or AI inputs. Separate least-privilege credentials are used for Web object management and Orchestration reads.
+
+The fake-storage adapter is test-only. Unit, contract, and isolated integration tests may inject it through test settings and temporary directories; development servers, manual local workflows, staging-like runs, and production must use R2. Phase 2 must enforce this policy in configuration and dependency wiring. The environment files provide at least the environment-specific R2 account/endpoint, bucket name, access-key ID, and secret access key. Web uses server-only `R2_ACCOUNT_ID`, `R2_ENDPOINT`, `R2_BUCKET_NAME`, `R2_ACCESS_KEY_ID`, and `R2_SECRET_ACCESS_KEY`; Orchestration uses the equivalent `CATALOGGUARD_R2_*` settings. The Web and Orchestration files for the same environment identify the same bucket but use separate least-privilege access-key credentials. Neither `.env.local` nor `.env.prod` is committed.
+
+### D-014: Executable OpenAPI documentation
+
+Both backend services publish OpenAPI 3.1 documentation and Swagger UI in documentation-enabled environments. Web generates its component schemas from the same Zod contracts used at runtime and serves the document at `/api/openapi.json` with Swagger UI at `/api/docs`. Orchestration uses FastAPI/Pydantic as its OpenAPI source and serves `/openapi.json` with Swagger UI at `/docs`. Documentation endpoints are disabled by default for production deployments and must never contain real cookies, service signatures, storage credentials, private object references, or sensitive payload examples.
+
+OpenAPI reconciliation is a mandatory exit criterion for every backend phase. Any added, changed, deprecated, or removed endpoint, request/response model, error, authentication requirement, header, status code, or example must update the owning service's generated document, Swagger descriptions, and drift/contract tests in the same change. Cross-service contract changes require both documents to be reconciled and compatibility-tested before the phase is complete.
 
 ## Shared payload shapes
 

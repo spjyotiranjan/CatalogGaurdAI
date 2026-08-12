@@ -2,6 +2,7 @@
   "$defs": {
     "AIAdvisoryV1": {
       "additionalProperties": false,
+      "description": "Strict non-authoritative AI category-consistency evidence.",
       "properties": {
         "advisoryType": {
           "const": "CATEGORY_CHECK",
@@ -176,6 +177,7 @@
     },
     "AIUsageV1": {
       "additionalProperties": false,
+      "description": "Bounded provider usage and optional cost attribution for one advisory.",
       "properties": {
         "costMicrounits": {
           "anyOf": [
@@ -211,6 +213,7 @@
     "JsonValue": {},
     "NormalizedProductCandidateV1": {
       "additionalProperties": false,
+      "description": "Versioned normalized candidate produced from one immutable source row.",
       "properties": {
         "attributes": {
           "additionalProperties": {
@@ -340,6 +343,7 @@
     },
     "RecordValidationResultV1": {
       "additionalProperties": false,
+      "description": "Outcome, evidence, and normalized data for one source row.",
       "properties": {
         "aiAdvisory": {
           "anyOf": [
@@ -436,8 +440,10 @@
     },
     "ResultExecutionMetadata": {
       "additionalProperties": false,
+      "description": "Trusted Orchestration execution identity returned with a result.",
       "properties": {
         "actorService": {
+          "description": "Configured Orchestration callback service identity.",
           "maxLength": 80,
           "minLength": 1,
           "title": "Actorservice",
@@ -445,10 +451,12 @@
         },
         "actorType": {
           "const": "SYSTEM",
+          "description": "Internal service actor type.",
           "title": "Actortype",
           "type": "string"
         },
         "correlationId": {
+          "description": "Original end-to-end trace identifier.",
           "format": "uuid",
           "title": "Correlationid",
           "type": "string"
@@ -464,6 +472,7 @@
     },
     "ResultSummaryV1": {
       "additionalProperties": false,
+      "description": "Reconciled job-level source-row counts.",
       "properties": {
         "acceptedRows": {
           "minimum": 0,
@@ -497,6 +506,7 @@
     },
     "ValidationFindingV1": {
       "additionalProperties": false,
+      "description": "Transport-only deterministic finding for Web canonical issue application.",
       "properties": {
         "detectedValue": {
           "anyOf": [
@@ -590,6 +600,7 @@
   },
   "$id": "https://catalogguard.local/contracts/v1/validation-job-result.schema.json",
   "additionalProperties": false,
+  "description": "Strict terminal Orchestration-to-Web callback body contract.",
   "properties": {
     "checksum": {
       "pattern": "^[a-f0-9]{64}$",

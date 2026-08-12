@@ -14,6 +14,8 @@ from app.contracts.context import ResultExecutionMetadata
 
 
 class NormalizedProductCandidateV1(StrictContractModel):
+    """Versioned normalized candidate produced from one immutable source row."""
+
     external_product_id: NonEmptyString = Field(max_length=128)
     sku: NonEmptyString = Field(max_length=128)
     title: NonEmptyString = Field(max_length=500)
@@ -44,6 +46,8 @@ class NormalizedProductCandidateV1(StrictContractModel):
 
 
 class ValidationFindingV1(StrictContractModel):
+    """Transport-only deterministic finding for Web canonical issue application."""
+
     rule_id: NonEmptyString = Field(max_length=100)
     rule_version: NonEmptyString = Field(max_length=40)
     field_path: NonEmptyString = Field(max_length=256)
@@ -56,12 +60,16 @@ class ValidationFindingV1(StrictContractModel):
 
 
 class AIUsageV1(StrictContractModel):
+    """Bounded provider usage and optional cost attribution for one advisory."""
+
     input_tokens: int = Field(ge=0)
     output_tokens: int = Field(ge=0)
     cost_microunits: int | None = Field(default=None, ge=0)
 
 
 class AIAdvisoryV1(StrictContractModel):
+    """Strict non-authoritative AI category-consistency evidence."""
+
     advisory_type: Literal["CATEGORY_CHECK"]
     status: Literal["COMPLETED", "FAILED", "SKIPPED"]
     consistent: bool | None = None
@@ -99,6 +107,8 @@ class AIAdvisoryV1(StrictContractModel):
 
 
 class RecordValidationResultV1(StrictContractModel):
+    """Outcome, evidence, and normalized data for one source row."""
+
     source_row_number: int = Field(ge=1)
     candidate_identity: NonEmptyString = Field(max_length=256)
     source_product_id: str | None = Field(default=None, max_length=128)
@@ -119,6 +129,8 @@ class RecordValidationResultV1(StrictContractModel):
 
 
 class ResultSummaryV1(StrictContractModel):
+    """Reconciled job-level source-row counts."""
+
     total_rows: int = Field(ge=0)
     processed_rows: int = Field(ge=0)
     accepted_rows: int = Field(ge=0)
@@ -134,6 +146,8 @@ class ResultSummaryV1(StrictContractModel):
 
 
 class ValidationJobResultV1(StrictContractModel):
+    """Strict terminal Orchestration-to-Web callback body contract."""
+
     contract_version: Literal["v1"]
     job_id: UUID
     feed_upload_id: ObjectIdString
