@@ -25,6 +25,23 @@ When a source conflicts with the shared decisions, record and resolve the discre
 
 **Exit criteria:** Protected mutations/read paths are server-authorized and tenant-scoped; core entities/indexes are in place; user/auth events are audited; every request/error is safely traceable by correlation ID.
 
+### Phase 1 completion record - 2026-08-12
+
+**Status:** Complete.
+
+**Implemented:**
+
+- Added fail-fast, typed server configuration with a committed [environment template](../.env.example), canonical Auth.js URL validation, production HTTPS enforcement, and replica-set-aware MongoDB configuration.
+- Added request correlation in [proxy.ts](../proxy.ts), safe structured log redaction, OpenTelemetry registration, stable client-safe error envelopes, and separate `GET /api/health` liveness and `GET /api/ready` dependency-readiness routes.
+- Configured Auth.js v5 credentials sessions with locked dependency versions, `httpOnly`/`sameSite`/environment-secure cookies, server-controlled expiry and refresh, bcrypt cost-12 password hashes, non-enumerating login failures, baseline login rate limiting, current-user status revalidation, and correlated login/failure/logout/password-change audit events.
+- Added route-boundary session checks and service-boundary authorization for `ADMIN`, `CATALOG_REVIEWER`, and `SELLER_OPERATOR`. Role and seller scope are re-derived from the active database user; invalid role/seller combinations and cross-seller access are denied.
+- Added protected `GET /api/account` and same-origin-protected `PATCH /api/account/password` backend routes. Password changes recheck the current password and write the new hash plus audit event in one MongoDB transaction.
+- Added strict Mongoose models and projected repositories for `SELLER`, `USER`, `CATEGORY`, and append-only `AUDIT_LOG`. The controlled [migration runner](../scripts/migrate.mts) creates database validators and named indexes without enabling automatic schema/index creation at application startup; run it with `npm run db:migrate` against a replica-set-capable MongoDB deployment.
+- Resolved the authentication-audit entity mismatch before schema implementation in shared decision D-011: `AUDIT_LOG.entityType` now includes `AUTH`, `USER`, and `CATEGORY`, while a null `entityId` is allowed only for pre-identity authentication events with a one-way email fingerprint.
+- Kept this phase backend-only: no page, component, styling, or other UI implementation was changed. The in-process login limiter is the Phase 1 baseline and must be backed by shared state before horizontally scaled production deployment.
+
+**Verification evidence:** `npm run typecheck`, `npm run lint`, and `npm run build` pass. `npm test` passes 10 files and 27 tests, covering environment validation, safe errors/logging, correlation propagation, password hashing, CSRF origin checks, unauthenticated and disabled-user rejection, role denial, cross-seller isolation, model invariants, repeatable real-MongoDB migration/index validation, and transactional login auditing. A production-server smoke check returned liveness `200`, an anonymous Auth.js session `200` with `null`, protected account access `401`, and readiness `503` when MongoDB was intentionally unavailable.
+
 ## Phase 2 - Private feed intake and validation-job dispatch
 
 **Goal:** Persist a CSV upload safely and deliver exactly one trusted job to Orchestration.
