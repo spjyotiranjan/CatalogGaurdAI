@@ -1,26 +1,118 @@
 @import "tailwindcss";
 
+/* =========================================================================
+   CatalogGuard AI — Design tokens
+   Source: Implementation Design Document, section 3.1 "Desktop design system"
+   Palette named exactly as in the design system swatches:
+   Ink / Purple / Teal (AI) / Blue (System) / Green (Ready) /
+   Amber (Warning) / Red (Blocker) / Surface
+   ========================================================================= */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Core palette */
+  --cg-ink: #0b0e1c;
+  --cg-ink-soft: #131729;
+  --cg-purple: #6d28d9;
+  --cg-purple-hover: #5b21b6;
+  --cg-purple-soft: #f2ecfd;
+  --cg-teal: #0f9b91;
+  --cg-teal-soft: #e6f6f4;
+  --cg-blue: #2563eb;
+  --cg-blue-soft: #e9f0fe;
+  --cg-green: #15803d;
+  --cg-green-soft: #e8f5ec;
+  --cg-amber: #b45309;
+  --cg-amber-soft: #fdf1e0;
+  --cg-red: #b91c1c;
+  --cg-red-soft: #fbe9e9;
+
+  /* Surfaces & text */
+  --cg-surface: #f6f7fb;
+  --cg-surface-raised: #ffffff;
+  --cg-border: #e3e5ee;
+  --cg-border-strong: #c9cce0;
+  --cg-text-primary: #12142a;
+  --cg-text-secondary: #565a76;
+  --cg-text-muted: #8388a3;
+  --cg-text-on-ink: #f4f5fb;
+  --cg-text-on-ink-muted: #9297b8;
+
+  /* Layout constants (3.5.2 / 3.5.3) */
+  --cg-rail-width: 244px;
+  --cg-topbar-height: 72px;
+  --cg-grid: 8px;
+  --cg-radius-panel: 12px;
+  --cg-radius-control: 10px;
+  --cg-control-height: 44px;
+
+  /* Typography (3.1 Typography & rhythm) */
+  --cg-font-ui: "Segoe UI", "Segoe UI Variable", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  --cg-font-mono: "Consolas", "SFMono-Regular", "Cascadia Code", ui-monospace, monospace;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: Arial, Helvetica, sans-serif;
-  --font-mono: "Courier New", Courier, monospace;
+  --color-ink: var(--cg-ink);
+  --color-purple: var(--cg-purple);
+  --color-teal: var(--cg-teal);
+  --color-blue: var(--cg-blue);
+  --color-green: var(--cg-green);
+  --color-amber: var(--cg-amber);
+  --color-red: var(--cg-red);
+  --color-surface: var(--cg-surface);
+  --font-sans: var(--cg-font-ui);
+  --font-mono: var(--cg-font-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--cg-surface);
+  color: var(--cg-text-primary);
+  font-family: var(--cg-font-ui);
+  font-size: 14px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* IDs, event data, correlation refs use monospace per 3.1 typography rule */
+.cg-mono {
+  font-family: var(--cg-font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* Visible keyboard focus (3.5.12) */
+:focus-visible {
+  outline: 2px solid var(--cg-purple);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Respect reduced motion (3.5.12) */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Screen-reader-only utility, used by live regions and icon-only control labels */
+.cg-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
