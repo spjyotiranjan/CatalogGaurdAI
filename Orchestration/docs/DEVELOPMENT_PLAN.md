@@ -14,21 +14,6 @@ This six-phase plan delivers FastAPI validation first and adds LangGraph/LangCha
 
 **Exit criteria:** A trusted caller can submit one schema-valid job; untrusted/stale/replayed/unknown-field messages fail safely; a fixture result is signed and accepted by contract tests; logs/metrics contain correlation ID without private payloads.
 
-### Phase 1 completion record - 2026-08-12
-
-**Status:** Complete.
-
-- Implemented the strict FastAPI foundation in `Orchestration/fastapi`: validated settings, fail-fast environment policy, liveness/readiness, safe stable errors, correlation middleware, redacted JSON logging, Prometheus metrics, and OpenTelemetry instrumentation.
-- Added D-012 to the shared architecture decisions and implemented versioned HMAC-SHA256 service authentication with body binding, constant-time comparison, clock-skew checks, durable nonce replay rejection, trusted actor matching, and an interoperable signature test vector.
-- Published strict generated `ValidationJobRequest v1` and `ValidationJobResult v1` JSON Schemas, including per-record normalized candidates, transport findings, AI advisory provenance, count reconciliation, CSV/product-listing constraints, and a Web callback fixture. Unknown properties and unsupported versions are rejected.
-- Added an operational-only SQLite repository with atomic job idempotency, durable nonce storage, job/checkpoint fields, and a durable queue seam. Schema v1 uses an explicit migration command; automatic migration is limited to development/test. No Web-owned canonical product, review, approval, or validation-issue record is persisted.
-- Added a scoped, bounded fake private-storage adapter for local contract testing. Production rejects this adapter; Phase 2 must select and configure the real private-object implementation.
-- Defined bounded callback classification/backoff and outbound result signing. Worker consumption, file parsing, deterministic rule execution, AI invocation, and callback delivery remain assigned to their later phases.
-
-**Verification:** Ruff passed; 40 automated tests passed; generated JSON Schemas validated against the request/result fixtures and fixed signature vector; the dependency lock is current; the dependency audit found no known vulnerabilities. A live Uvicorn smoke test returned `200` for liveness and readiness, rejected unsigned job intake with `401`, and accepted a correctly signed job with `202` and a status location.
-
-**Operational assumption:** Phase 1 SQLite and its repository-backed queue are the durable single-instance baseline. Before Phase 4 production/horizontal workers, retain the repository/queue interfaces while selecting a concurrency-safe production datastore and broker.
-
 ## Phase 2 - Streaming ingestion, mapping, and normalization
 
 **Goal:** Reliably turn one private CSV source into bounded normalized row candidates.
