@@ -37,6 +37,15 @@ const environmentSchema = z
     LOG_LEVEL: z.enum(["debug", "info", "warn", "error", "silent"]),
     API_DOCS_ENABLED: booleanFromEnvironment,
     BOOTSTRAP_ADMIN_SECRET: z.string().min(32).optional(),
+    ORCHESTRATION_BASE_URL: z.url(),
+    ORCHESTRATION_WEB_SERVICE_ID: z.string().trim().min(3).max(80),
+    ORCHESTRATION_WEB_SERVICE_KEY_VERSION: z.string().trim().min(1).max(40),
+    ORCHESTRATION_WEB_SERVICE_SECRET: z.string().min(32).optional(),
+    ORCHESTRATION_CALLBACK_SERVICE_ID: z.string().trim().min(3).max(80),
+    ORCHESTRATION_CALLBACK_KEY_VERSION: z.string().trim().min(1).max(40),
+    ORCHESTRATION_CALLBACK_SIGNING_SECRET: z.string().min(32).optional(),
+    ORCHESTRATION_SERVICE_AUTH_MAX_CLOCK_SKEW_SECONDS: integerFromEnvironment(30, 900),
+    ORCHESTRATION_REPLAY_NONCE_RETENTION_SECONDS: integerFromEnvironment(60, 3_600),
   })
   .strict()
   .superRefine((value, context) => {
@@ -67,9 +76,47 @@ const environmentSchema = z
         message: "Auth.js requires trusted host handling; set this to true with AUTH_URL configured",
       });
     }
+
+    if (value.ORCHESTRATION_WEB_SERVICE_ID === value.ORCHESTRATION_CALLBACK_SERVICE_ID) {
+      context.addIssue({
+        code: "custom",
+        path: ["ORCHESTRATION_CALLBACK_SERVICE_ID"],
+        message: "Web intake and Orchestration callback service IDs must differ",
+      });
+    }
+    if (value.ORCHESTRATION_WEB_SERVICE_SECRET && value.ORCHESTRATION_CALLBACK_SIGNING_SECRET && value.ORCHESTRATION_WEB_SERVICE_SECRET === value.ORCHESTRATION_CALLBACK_SIGNING_SECRET) {
+      context.addIssue({
+        code: "custom",
+        path: ["ORCHESTRATION_CALLBACK_SIGNING_SECRET"],
+        message: "Web intake and Orchestration callback secrets must differ",
+      });
+    }
+    if (value.ORCHESTRATION_REPLAY_NONCE_RETENTION_SECONDS < value.ORCHESTRATION_SERVICE_AUTH_MAX_CLOCK_SKEW_SECONDS * 2) {
+      context.addIssue({
+        code: "custom",
+        path: ["ORCHESTRATION_REPLAY_NONCE_RETENTION_SECONDS"],
+        message: "Must cover both sides of the accepted clock-skew window",
+      });
+    }
   });
 
 export type Environment = z.infer<typeof environmentSchema>;
+
+const orchestrationBridgeEnvironmentSchema = z
+  .object({
+    ORCHESTRATION_BASE_URL: z.url(),
+    ORCHESTRATION_WEB_SERVICE_ID: z.string().trim().min(3).max(80),
+    ORCHESTRATION_WEB_SERVICE_KEY_VERSION: z.string().trim().min(1).max(40),
+    ORCHESTRATION_WEB_SERVICE_SECRET: z.string().min(32),
+    ORCHESTRATION_CALLBACK_SERVICE_ID: z.string().trim().min(3).max(80),
+    ORCHESTRATION_CALLBACK_KEY_VERSION: z.string().trim().min(1).max(40),
+    ORCHESTRATION_CALLBACK_SIGNING_SECRET: z.string().min(32),
+    ORCHESTRATION_SERVICE_AUTH_MAX_CLOCK_SKEW_SECONDS: integerFromEnvironment(30, 900),
+    ORCHESTRATION_REPLAY_NONCE_RETENTION_SECONDS: integerFromEnvironment(60, 3_600),
+  })
+  .strict();
+
+export type OrchestrationBridgeEnvironment = z.infer<typeof orchestrationBridgeEnvironmentSchema>;
 
 let cachedEnvironment: Environment | undefined;
 
@@ -96,6 +143,15 @@ function rawEnvironment() {
       process.env.API_DOCS_ENABLED ??
       (catalogguardEnvironment === "production" ? "false" : "true"),
     BOOTSTRAP_ADMIN_SECRET: process.env.BOOTSTRAP_ADMIN_SECRET,
+    ORCHESTRATION_BASE_URL: process.env.ORCHESTRATION_BASE_URL ?? "http://localhost:8000",
+    ORCHESTRATION_WEB_SERVICE_ID: process.env.ORCHESTRATION_WEB_SERVICE_ID ?? "web-bff",
+    ORCHESTRATION_WEB_SERVICE_KEY_VERSION: process.env.ORCHESTRATION_WEB_SERVICE_KEY_VERSION ?? "web-k1",
+    ORCHESTRATION_WEB_SERVICE_SECRET: process.env.ORCHESTRATION_WEB_SERVICE_SECRET,
+    ORCHESTRATION_CALLBACK_SERVICE_ID: process.env.ORCHESTRATION_CALLBACK_SERVICE_ID ?? "validation-orchestrator",
+    ORCHESTRATION_CALLBACK_KEY_VERSION: process.env.ORCHESTRATION_CALLBACK_KEY_VERSION ?? "orchestration-k1",
+    ORCHESTRATION_CALLBACK_SIGNING_SECRET: process.env.ORCHESTRATION_CALLBACK_SIGNING_SECRET,
+    ORCHESTRATION_SERVICE_AUTH_MAX_CLOCK_SKEW_SECONDS: process.env.ORCHESTRATION_SERVICE_AUTH_MAX_CLOCK_SKEW_SECONDS ?? "300",
+    ORCHESTRATION_REPLAY_NONCE_RETENTION_SECONDS: process.env.ORCHESTRATION_REPLAY_NONCE_RETENTION_SECONDS ?? "900",
   };
 }
 
@@ -109,6 +165,24 @@ export function getEnvironment(): Environment {
 
 export function validateEnvironment(): void {
   getEnvironment();
+}
+
+export function getOrchestrationBridgeEnvironment(): OrchestrationBridgeEnvironment | null {
+  const environment = getEnvironment();
+  if (!environment.ORCHESTRATION_WEB_SERVICE_SECRET || !environment.ORCHESTRATION_CALLBACK_SIGNING_SECRET) {
+    return null;
+  }
+  return orchestrationBridgeEnvironmentSchema.parse({
+    ORCHESTRATION_BASE_URL: environment.ORCHESTRATION_BASE_URL,
+    ORCHESTRATION_WEB_SERVICE_ID: environment.ORCHESTRATION_WEB_SERVICE_ID,
+    ORCHESTRATION_WEB_SERVICE_KEY_VERSION: environment.ORCHESTRATION_WEB_SERVICE_KEY_VERSION,
+    ORCHESTRATION_WEB_SERVICE_SECRET: environment.ORCHESTRATION_WEB_SERVICE_SECRET,
+    ORCHESTRATION_CALLBACK_SERVICE_ID: environment.ORCHESTRATION_CALLBACK_SERVICE_ID,
+    ORCHESTRATION_CALLBACK_KEY_VERSION: environment.ORCHESTRATION_CALLBACK_KEY_VERSION,
+    ORCHESTRATION_CALLBACK_SIGNING_SECRET: environment.ORCHESTRATION_CALLBACK_SIGNING_SECRET,
+    ORCHESTRATION_SERVICE_AUTH_MAX_CLOCK_SKEW_SECONDS: environment.ORCHESTRATION_SERVICE_AUTH_MAX_CLOCK_SKEW_SECONDS,
+    ORCHESTRATION_REPLAY_NONCE_RETENTION_SECONDS: environment.ORCHESTRATION_REPLAY_NONCE_RETENTION_SECONDS,
+  });
 }
 
 export function resetEnvironmentForTests(): void {

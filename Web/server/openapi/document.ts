@@ -15,6 +15,7 @@ import {
   passwordChangeSchema,
 } from "@/lib/contracts/auth";
 import { errorEnvelopeSchema } from "@/lib/contracts/errors";
+import { validationJobResultSchema } from "@/lib/contracts/orchestration";
 import {
   authProvidersResponseSchema,
   authSessionResponseSchema,
@@ -123,6 +124,7 @@ export function createOpenApiDocument(): OpenApiDocument {
       { name: "Account", description: "Authenticated account profile and credential maintenance." },
       { name: "Access Requests", description: "Public seller/reviewer proposals and administrator decisions." },
       { name: "Bootstrap", description: "One-time first-administrator provisioning." },
+      { name: "Internal integrations", description: "Authenticated service-to-service contracts; never invoked by a browser." },
     ],
     paths: {
       "/api/health": {
@@ -447,6 +449,32 @@ export function createOpenApiDocument(): OpenApiDocument {
           responses: { "201": successResponse("Administrator created.", "AccountResponse"), "400": errorResponse("The bootstrap payload is invalid.", "VALIDATION_FAILED"), "403": errorResponse("Bootstrap authorization failed.", "AUTHORIZATION_DENIED"), "409": errorResponse("An account already exists for this email.", "CONFLICT") },
         },
       },
+      "/api/internal/validation-results": {
+        post: {
+          tags: ["Internal integrations"],
+          operationId: "acceptOrchestrationValidationResultContract",
+          summary: "Verify a signed Orchestration v1 callback fixture",
+          description:
+            "Phase 1 contract bridge only. Verifies the exact HMAC-bound request bytes, callback actor, clock window, and durable nonce before recording a contract-receipt audit event. It does not apply canonical feed/product/issue effects; that begins in later phases.",
+          parameters: [
+            correlationParameter,
+            { name: "X-CatalogGuard-Key-Version", in: "header", required: true, schema: { type: "string" } },
+            { name: "X-CatalogGuard-Service", in: "header", required: true, schema: { type: "string" } },
+            { name: "X-CatalogGuard-Timestamp", in: "header", required: true, schema: { type: "integer", format: "int64" } },
+            { name: "X-CatalogGuard-Nonce", in: "header", required: true, schema: { type: "string", format: "uuid" } },
+            { name: "X-CatalogGuard-Signature", in: "header", required: true, schema: { type: "string", format: "password" } },
+          ],
+          requestBody: { required: true, content: jsonContent("ValidationJobResultV1") },
+          responses: {
+            "204": { description: "Signed v1 callback fixture accepted and audited. No canonical data is applied.", headers: { "X-Correlation-ID": correlationHeader } },
+            "401": errorResponse("Service authentication failed or the message is stale.", "SERVICE_AUTHENTICATION_FAILED"),
+            "403": errorResponse("The authenticated service does not match the callback actor.", "ACTOR_IDENTITY_MISMATCH"),
+            "409": errorResponse("The callback correlation ID mismatches or nonce was already processed.", "SERVICE_MESSAGE_REPLAYED"),
+            "415": errorResponse("The callback content type is unsupported.", "JOB_CONTRACT_INVALID"),
+            "400": errorResponse("The callback does not match the strict v1 contract.", "JOB_CONTRACT_INVALID"),
+          },
+        },
+      },
       "/api/openapi.json": {
         get: {
           tags: ["Operations"],
@@ -493,6 +521,7 @@ export function createOpenApiDocument(): OpenApiDocument {
         AuthSessionResponse: componentSchema(authSessionResponseSchema),
         AuthProvidersResponse: componentSchema(authProvidersResponseSchema),
         CsrfTokenResponse: componentSchema(csrfTokenResponseSchema),
+        ValidationJobResultV1: componentSchema(validationJobResultSchema, "input"),
       },
       parameters: {
         CorrelationId: {

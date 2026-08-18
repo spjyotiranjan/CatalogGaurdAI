@@ -49,3 +49,21 @@ export function createUserExecutionContext(input: {
   };
 }
 
+export function createServiceExecutionContext(input: {
+  correlationId: string;
+  actorType?: "SYSTEM" | "AI";
+  actorService: string;
+  sellerId?: string | null;
+}): ServiceExecutionContext {
+  return {
+    correlationId: z.uuid().parse(input.correlationId),
+    actorType: input.actorType ?? "SYSTEM",
+    actorUserId: null,
+    actorService: z.string().trim().min(1).max(80).parse(input.actorService),
+    role: null,
+    sellerId: input.sellerId === null || input.sellerId === undefined
+      ? null
+      : objectIdStringSchema.parse(input.sellerId),
+  };
+}
+

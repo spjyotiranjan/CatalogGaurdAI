@@ -7,3 +7,5 @@ process.env.AUTH_SECRET = "test-only-auth-secret-with-at-least-32-characters";
 process.env.AUTH_URL = "http://localhost:3000";
 process.env.AUTH_TRUST_HOST = "true";
 process.env.LOG_LEVEL = "silent";
+process.env.ORCHESTRATION_WEB_SERVICE_SECRET = "test-web-service-secret-with-at-least-32-characters";
+process.env.ORCHESTRATION_CALLBACK_SIGNING_SECRET = "test-callback-secret-with-at-least-32-characters";

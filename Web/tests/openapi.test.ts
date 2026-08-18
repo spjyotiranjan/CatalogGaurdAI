@@ -24,6 +24,7 @@ const expectedPaths = [
   "/api/docs",
   "/api/health",
   "/api/internal/bootstrap/admin",
+  "/api/internal/validation-results",
   "/api/openapi.json",
   "/api/ready",
 ];
@@ -65,6 +66,7 @@ describe("Web OpenAPI documentation", () => {
         "ReadinessResponse",
         "CreateAccessRequest",
         "BootstrapAdmin",
+        "ValidationJobResultV1",
       ]),
     );
     expect(schemas.AccountResponse.additionalProperties).toBe(false);

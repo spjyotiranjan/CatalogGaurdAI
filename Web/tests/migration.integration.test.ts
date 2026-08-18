@@ -110,7 +110,7 @@ describe("Phase 1 database migration", () => {
 
     const history = await database
       .collection("_schema_migrations")
-      .find({ id: "003-access-request-dismissals" })
+      .find({ id: "004-orchestration-phase-one-bridge" })
       .toArray();
     expect(history).toHaveLength(1);
 
@@ -118,6 +118,14 @@ describe("Phase 1 database migration", () => {
     expect(accessRequestIndexes).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ name: "access_request_dismissed_status" }),
+      ]),
+    );
+
+    const nonceIndexes = await database.collection("service_message_nonces").indexes();
+    expect(nonceIndexes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "service_message_nonce_unique", unique: true }),
+        expect.objectContaining({ name: "service_message_nonce_expiry", expireAfterSeconds: 0 }),
       ]),
     );
   });

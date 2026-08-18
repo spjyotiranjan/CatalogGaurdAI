@@ -58,6 +58,10 @@ Web -> seller/reviewer: persisted status and next permitted action
 
 The browser never calls FastAPI directly, never receives internal storage identifiers, and never supplies a trusted `sellerId` for a seller-owned request.
 
+### Phase 1 bridge boundary
+
+Before any live feed work, Web and Orchestration share strict `ValidationJobRequest v1` and `ValidationJobResult v1` contracts plus D-012 HMAC-SHA256 signing. Web verifies the exact signed callback bytes, service/key identity, timestamp, nonce, callback actor, and correlation ID at `POST /api/internal/validation-results`. It stores a durable replay nonce and append-only receipt audit event only; it must not create products, issues, or other canonical effects from the Phase 1 fixture. Real dispatch starts in Phase 2, while durable processing and result application follow their respective later phases.
+
 Real local-development and production feed flows both use private Cloudflare R2. `.env.local` selects the dedicated local-development bucket; `.env.prod` selects the separate production bucket. The corresponding Web and Orchestration environment files target the same bucket for that environment with separate least-privilege credentials. Fake object storage is permitted only inside automated tests.
 
 ## UX implementation requirements

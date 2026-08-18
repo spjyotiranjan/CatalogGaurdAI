@@ -33,6 +33,12 @@ Every phase must reconcile `/openapi.json` and `/docs` with its implemented Fast
 
 **Verification:** Ruff passed; 44 automated tests passed, including OpenAPI drift/security/model and Swagger availability checks; generated JSON Schemas validated against the request/result fixtures and fixed signature vector; the dependency lock is current; the dependency audit found no known vulnerabilities. A live Uvicorn smoke test returned `200` for liveness and readiness, rejected unsigned job intake with `401`, and accepted a correctly signed job with `202` and a status location.
 
+### Phase 1 Web bridge completion record - 2026-08-18
+
+**Status:** Complete.
+
+The matching Web bridge consumes the committed v1 result fixture and D-012 signature test vector directly. Web now verifies a signed callback fixture at its protected internal endpoint, rejects stale/replayed/unknown-field messages with a durable nonce ledger, and records only a callback-contract receipt audit event. This proves the trusted boundary without introducing worker execution, R2 parsing, live callback delivery, or canonical result application before their assigned phases.
+
 **Operational assumption:** Phase 1 SQLite and its repository-backed queue are the durable single-instance baseline. Before Phase 4 production/horizontal workers, retain the repository/queue interfaces while selecting a concurrency-safe production datastore and broker.
 
 ## Phase 2 - Streaming ingestion, mapping, and normalization

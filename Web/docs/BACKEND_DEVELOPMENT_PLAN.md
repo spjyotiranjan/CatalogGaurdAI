@@ -48,6 +48,18 @@ Every phase must reconcile `/api/openapi.json` and `/api/docs` with its implemen
 
 **Verification evidence:** `npm run typecheck`, `npm run lint`, and `npm run build` pass. `npm test` passes 11 files and 33 tests, covering OpenAPI drift/security/model/availability checks, environment validation, safe errors/logging, correlation propagation, password hashing, CSRF origin checks, unauthenticated and disabled-user rejection, role denial, cross-seller isolation, model invariants, repeatable real-MongoDB migration/index validation, and transactional login auditing. A live documentation smoke check returned `200` for `/api/openapi.json` and `/api/docs`; the production-server behavior checks remain liveness `200`, anonymous Auth.js session `200` with `null`, protected account access `401`, and readiness `503` when MongoDB is intentionally unavailable.
 
+### Phase 1 cross-service bridge completion record - 2026-08-18
+
+**Status:** Complete.
+
+- Added the Web-owned strict Zod representations of `ValidationJobRequest v1` and `ValidationJobResult v1`, verified directly against the committed Orchestration schemas and result fixture.
+- Added D-012-compatible HMAC-SHA256 canonical-message signing and verification, with the committed language-neutral signature vector as the compatibility proof. The configured Web service identity/secret matches Orchestration job intake; the distinct configured callback identity/secret verifies Orchestration results.
+- Added protected `POST /api/internal/validation-results`. It verifies exact body bytes, required service headers, timestamp window, UUID nonce, configured callback actor, and correlation identity before accepting the Phase 1 fixture. It deliberately records only an audit receipt; feed/product/issue application remains a later-phase responsibility.
+- Added durable MongoDB replay protection (`004-orchestration-phase-one-bridge`) using a unique service/key-version/nonce ledger and expiry index. The nonce claim and callback-receipt audit event commit in one transaction.
+- Added the callback contract operation and strict result model to Web OpenAPI/Swagger. The matching environment values are documented in `.env.example`; the corresponding values must match `Orchestration/fastapi/.env` without reusing the two signing secrets.
+
+**Verification evidence:** the Web compatibility suite reads Orchestration's committed `signature-test-vector.json` and `validation-job-result.v1.json`, accepts the signed fixture once, records the audit receipt, and rejects the replay and an unknown-field contract variant.
+
 ## Sub Phase 1.5 - Access requests and administrator approval
 
 **Goal:** Let prospective sellers and reviewers submit a controlled proposal while preserving administrator-only authority over account activation.
