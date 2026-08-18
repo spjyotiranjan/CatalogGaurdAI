@@ -1,6 +1,4 @@
 .env
-.env.local
-.env.prod
 .pytest_cache/
 .ruff_cache/
 .venv/

@@ -3,7 +3,6 @@ from uuid import UUID
 
 from fastapi import APIRouter, Header, Request, Response
 
-from app.contracts.errors import ErrorEnvelope
 from app.contracts.jobs import (
     AcceptedJobResponseV1,
     JobStatusResponseV1,
@@ -58,55 +57,12 @@ async def _authenticate(request: Request, body: bytes):
     "/jobs",
     response_model=AcceptedJobResponseV1,
     status_code=202,
-    operation_id="submitValidationJob",
-    summary="Accept a validation job",
-    description=(
-        "Authenticates the Web service over the exact request bytes, rejects stale/replayed "
-        "messages, validates the strict v1 contract and trusted actor/correlation metadata, "
-        "then atomically persists one logical job and queue message. Browser traffic is "
-        "unsupported."
-    ),
-    response_description="The new or byte-identical idempotent job was accepted.",
-    responses={
-        401: {"model": ErrorEnvelope, "description": "Service authentication failed or is stale."},
-        403: {"model": ErrorEnvelope, "description": "Authenticated service and actor differ."},
-        409: {
-            "model": ErrorEnvelope,
-            "description": "Correlation, idempotency identity, or replay protection conflict.",
-        },
-        413: {"model": ErrorEnvelope, "description": "Request body exceeds the configured limit."},
-        415: {"model": ErrorEnvelope, "description": "Content type is not application/json."},
-        422: {"model": ErrorEnvelope, "description": "Request does not match contract v1."},
-        500: {"model": ErrorEnvelope, "description": "Safe unexpected internal failure."},
-    },
     openapi_extra={
         "requestBody": {
             "required": True,
             "content": {
                 "application/json": {
-                    "schema": {"$ref": "#/components/schemas/ValidationJobRequestV1"},
-                    "example": {
-                        "contractVersion": "v1",
-                        "jobId": "33333333-3333-4333-8333-333333333333",
-                        "idempotencyKey": "feed-validation:example-1",
-                        "feed": {
-                            "feedUploadId": "66bb4f8b683bb83a83c26222",
-                            "sellerId": "66bb4f8b683bb83a83c26111",
-                            "fileType": "CSV",
-                            "feedType": "PRODUCT_LISTING",
-                            "checksum": (
-                                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-                                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-                            ),
-                            "storageObjectKey": "safe-example/feed.csv",
-                            "mappingVersion": "catalog-map/v1",
-                        },
-                        "execution": {
-                            "correlationId": "44444444-4444-4444-8444-444444444444",
-                            "actorType": "SYSTEM",
-                            "actorService": "web-bff",
-                        },
-                    },
+                    "schema": ValidationJobRequestV1.model_json_schema(by_alias=True)
                 }
             },
         }
@@ -115,21 +71,11 @@ async def _authenticate(request: Request, body: bytes):
 async def submit_job(
     request: Request,
     response: Response,
-    x_catalogguard_key_version: str | None = Header(
-        default=None, description="Signing-key version configured for the Web service."
-    ),
-    x_catalogguard_service: str | None = Header(
-        default=None, description="Authenticated Web service ID."
-    ),
-    x_catalogguard_timestamp: str | None = Header(
-        default=None, description="Unix timestamp in seconds."
-    ),
-    x_catalogguard_nonce: str | None = Header(
-        default=None, description="Unique UUID used for durable replay rejection."
-    ),
-    x_catalogguard_signature: str | None = Header(
-        default=None, description="Lowercase HMAC-SHA256 D-012 signature."
-    ),
+    x_catalogguard_key_version: str | None = Header(default=None),
+    x_catalogguard_service: str | None = Header(default=None),
+    x_catalogguard_timestamp: str | None = Header(default=None),
+    x_catalogguard_nonce: str | None = Header(default=None),
+    x_catalogguard_signature: str | None = Header(default=None),
 ) -> AcceptedJobResponseV1:
     del (
         x_catalogguard_key_version,
@@ -208,42 +154,15 @@ async def submit_job(
     return accepted
 
 
-@router.get(
-    "/jobs/{job_id}",
-    response_model=JobStatusResponseV1,
-    operation_id="getValidationJobStatus",
-    summary="Read validation-job status",
-    description=(
-        "Authenticates the calling service and returns the operational status projection. "
-        "Progress is persisted state and is never inferred by the client."
-    ),
-    response_description="Current persisted operational status.",
-    responses={
-        401: {"model": ErrorEnvelope, "description": "Service authentication failed or is stale."},
-        404: {"model": ErrorEnvelope, "description": "The job does not exist."},
-        409: {"model": ErrorEnvelope, "description": "The signed nonce has already been accepted."},
-        422: {"model": ErrorEnvelope, "description": "The path job ID is not a valid UUID."},
-        500: {"model": ErrorEnvelope, "description": "Safe unexpected internal failure."},
-    },
-)
+@router.get("/jobs/{job_id}", response_model=JobStatusResponseV1)
 async def job_status(
     job_id: str,
     request: Request,
-    x_catalogguard_key_version: str | None = Header(
-        default=None, description="Signing-key version configured for the Web service."
-    ),
-    x_catalogguard_service: str | None = Header(
-        default=None, description="Authenticated Web service ID."
-    ),
-    x_catalogguard_timestamp: str | None = Header(
-        default=None, description="Unix timestamp in seconds."
-    ),
-    x_catalogguard_nonce: str | None = Header(
-        default=None, description="Unique UUID used for durable replay rejection."
-    ),
-    x_catalogguard_signature: str | None = Header(
-        default=None, description="Lowercase HMAC-SHA256 D-012 signature."
-    ),
+    x_catalogguard_key_version: str | None = Header(default=None),
+    x_catalogguard_service: str | None = Header(default=None),
+    x_catalogguard_timestamp: str | None = Header(default=None),
+    x_catalogguard_nonce: str | None = Header(default=None),
+    x_catalogguard_signature: str | None = Header(default=None),
 ) -> JobStatusResponseV1:
     del (
         x_catalogguard_key_version,

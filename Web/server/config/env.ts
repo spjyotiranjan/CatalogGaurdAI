@@ -35,7 +35,6 @@ const environmentSchema = z
     LOGIN_RATE_LIMIT_WINDOW_MS: integerFromEnvironment(1_000, 3_600_000),
     LOGIN_RATE_LIMIT_MAX_ATTEMPTS: integerFromEnvironment(1, 100),
     LOG_LEVEL: z.enum(["debug", "info", "warn", "error", "silent"]),
-    API_DOCS_ENABLED: booleanFromEnvironment,
   })
   .strict()
   .superRefine((value, context) => {
@@ -73,10 +72,9 @@ export type Environment = z.infer<typeof environmentSchema>;
 let cachedEnvironment: Environment | undefined;
 
 function rawEnvironment() {
-  const catalogguardEnvironment =
-    process.env.CATALOGGUARD_ENVIRONMENT ?? process.env.NODE_ENV ?? "development";
   return {
-    CATALOGGUARD_ENVIRONMENT: catalogguardEnvironment,
+    CATALOGGUARD_ENVIRONMENT:
+      process.env.CATALOGGUARD_ENVIRONMENT ?? process.env.NODE_ENV ?? "development",
     CATALOGGUARD_SERVICE_NAME: process.env.CATALOGGUARD_SERVICE_NAME ?? "catalogguard-web",
     CATALOGGUARD_APP_VERSION: process.env.CATALOGGUARD_APP_VERSION ?? "0.1.0",
     MONGODB_URI: process.env.MONGODB_URI,
@@ -91,9 +89,6 @@ function rawEnvironment() {
     LOGIN_RATE_LIMIT_WINDOW_MS: process.env.LOGIN_RATE_LIMIT_WINDOW_MS ?? "900000",
     LOGIN_RATE_LIMIT_MAX_ATTEMPTS: process.env.LOGIN_RATE_LIMIT_MAX_ATTEMPTS ?? "10",
     LOG_LEVEL: process.env.LOG_LEVEL ?? "info",
-    API_DOCS_ENABLED:
-      process.env.API_DOCS_ENABLED ??
-      (catalogguardEnvironment === "production" ? "false" : "true"),
   };
 }
 
