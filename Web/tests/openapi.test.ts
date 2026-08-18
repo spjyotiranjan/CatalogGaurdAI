@@ -7,13 +7,8 @@ import {
 import { createOpenApiDocument } from "@/server/openapi/document";
 
 const expectedPaths = [
-  "/api/access-requests",
   "/api/account",
   "/api/account/password",
-  "/api/admin/access-requests",
-  "/api/admin/access-requests/{id}/approve",
-  "/api/admin/access-requests/{id}/dismiss",
-  "/api/admin/access-requests/{id}/revoke",
   "/api/auth/callback/credentials",
   "/api/auth/csrf",
   "/api/auth/error",
@@ -23,7 +18,6 @@ const expectedPaths = [
   "/api/auth/signout",
   "/api/docs",
   "/api/health",
-  "/api/internal/bootstrap/admin",
   "/api/openapi.json",
   "/api/ready",
 ];
@@ -53,9 +47,6 @@ describe("Web OpenAPI documentation", () => {
     expect(Object.keys(schemas)).toEqual(
       expect.arrayContaining([
         "AccountResponse",
-        "AccessRequestDecision",
-        "AccessRequestList",
-        "AccessRequestSubmission",
         "AuthProvidersResponse",
         "AuthSessionResponse",
         "CredentialsCallbackRequest",
@@ -63,8 +54,6 @@ describe("Web OpenAPI documentation", () => {
         "HealthResponse",
         "PasswordChangeRequest",
         "ReadinessResponse",
-        "CreateAccessRequest",
-        "BootstrapAdmin",
       ]),
     );
     expect(schemas.AccountResponse.additionalProperties).toBe(false);
@@ -79,12 +68,6 @@ describe("Web OpenAPI documentation", () => {
       { authSessionCookie: [] },
     ]);
     expect(paths["/api/account/password"].patch.requestBody).toBeDefined();
-    expect(paths["/api/admin/access-requests"].get.security).toEqual([
-      { authSessionCookie: [] },
-    ]);
-    expect(paths["/api/admin/access-requests/{id}/approve"].post.security).toEqual([
-      { authSessionCookie: [] },
-    ]);
   });
 
   it("serves the generated document when documentation is enabled", async () => {

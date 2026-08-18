@@ -1,6 +1,6 @@
 import "server-only";
 
-import { Types, type ClientSession } from "mongoose";
+import { Types } from "mongoose";
 
 import { connectToDatabase } from "@/server/db/mongoose";
 import { SellerModel } from "@/server/models/seller";
@@ -13,11 +13,6 @@ export type SellerSummary = {
 };
 
 export class SellerRepository {
-  async create(input: { sellerCode: string; businessName: string; contactEmail: string; contactPhone?: string; status: "ACTIVE" | "INACTIVE" | "SUSPENDED" }, session: ClientSession): Promise<SellerSummary> {
-    await connectToDatabase();
-    const [seller] = await SellerModel.create([{ ...input }], { session });
-    return { id: seller._id.toString(), sellerCode: seller.sellerCode, businessName: seller.businessName, status: seller.status };
-  }
   async findInTrustedScope(
     trustedSellerId: string,
     requestedSellerId: string,

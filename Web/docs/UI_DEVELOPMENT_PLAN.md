@@ -23,20 +23,6 @@ Before implementing or changing a user-facing route, consult the approved [Imple
 
 **Exit criteria:** The shared shell and public/protected states visually match the supplied design direction, have keyboard coverage, and do not infer authorization from client state.
 
-## Sub Phase 1.5 - Access-request and administrator portal UI
-
-**Goal:** Give prospective sellers and reviewers a safe application path, and give administrators a clear, protected request-review workspace.
-
-- On the normal `/login` screen, provide distinct **Join as seller** and **Join as reviewer** actions that open the matching proposal form. Keep the administrator portal as a separate login presentation, with administrator-specific copy and a route back to the normal access-request actions.
-- Submit proposals through the typed access-request contract. Map server field errors to the exact form controls, retain entered non-sensitive details after validation failure, label unavailable password-reset functionality honestly, and never display raw server/internal errors.
-- After a successful proposal, close and reset the modal and announce the result through the shared toast/live region. The form submit action must remain clearly visible and usable in a long modal.
-- Build `/admin/access-requests` from server-confirmed data only. Its protected-route state must direct an unauthenticated visitor to the administrator login context; a non-administrator receives the normal safe access-denied behavior.
-- Let administrators approve or revoke pending proposals with an optional note. Show pending, approved, and revoked status distinctly; wait for the server response before changing a card; and show operation-specific success/error feedback.
-- Let an administrator dismiss an approved or revoked request from their own view. Remove it only after server confirmation and explain that dismissal does not delete the request or audit history.
-- Provide keyboard-accessible modal, focus, loading, empty, authorization-failure, and recoverable error states. UI affordances are never the authorization boundary.
-
-**Exit criteria:** A prospective seller or reviewer can submit a proposal and understand that access is pending; an authenticated administrator can review, approve, revoke, or dismiss the appropriate records; field and operation errors are clear; and all authority remains server-enforced.
-
 ## Phase 2 - Seller feed-intake experience
 
 **Goal:** Make feed submission understandable, safe, and transparent.

@@ -1,6 +1,5 @@
 import type { SessionUser } from "@/lib/types/session";
 import { ROLE_LABEL } from "@/lib/types/session";
-import { SignOutButton } from "@/components/auth/SignOutButton";
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/);
@@ -41,7 +40,6 @@ export function TopBar({ breadcrumb, title, user }: TopBarProps) {
             {ROLE_LABEL[user.role]}
           </span>
         </div>
-        <SignOutButton />
       </div>
     </header>
   );

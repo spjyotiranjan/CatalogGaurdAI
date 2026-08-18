@@ -1,17 +1,17 @@
-import type { UserRole } from "@/lib/contracts/auth";
-
 /**
- * Presentation types derived from the authenticated Web backend account.
+ * Screen-state contract types for Phase 1 (UI-only track).
  *
- * Protected pages re-authorize the active database user before rendering.
+ * These mirror the shape the BFF (Web backend plan) is expected to return.
+ * Per docs/DEVELOPMENT_PLAN.md: "The UI may use mocked contract fixtures
+ * while the backend is being built, but it must replace them with typed
+ * backend contracts before a slice is considered complete."
  *
- * Navigation is presentation-only and never an authorization
+ * Nothing in this file or its fixtures may be treated as an authorization
  * decision — it exists only to let UI components render a plausible,
  * server-shaped state before Web Backend Phase 1 exists.
  */
 
-/** UI role is the same contract type that Auth.js and BFF authorization use. */
-export type Role = UserRole;
+export type Role = "SELLER_OPERATOR" | "CATALOG_REVIEWER" | "ADMIN";
 
 export interface SessionUser {
   userId: string;
@@ -21,6 +21,7 @@ export interface SessionUser {
   /** Present only for SELLER_OPERATOR; null for reviewer/admin (global scope). */
   sellerId: string | null;
   sellerName: string | null;
+  mfaEnabled: boolean;
 }
 
 export interface AuthState {
@@ -43,8 +44,7 @@ export type NavIconName =
   | "users"
   | "categories"
   | "rules"
-  | "audit"
-  | "requests";
+  | "audit";
 
 export interface NavItem {
   label: string;
@@ -76,7 +76,6 @@ export const NAV_BY_ROLE: Record<Role, NavItem[]> = {
     { label: "Users", href: "/admin/users", icon: "users" },
     { label: "Categories", href: "/admin/categories", icon: "categories" },
     { label: "Validation rules", href: "/admin/rules", icon: "rules" },
-    { label: "Access requests", href: "/admin/access-requests", icon: "requests" },
     { label: "Audit log", href: "/admin/audit", icon: "audit" },
     { label: "Profile", href: "/profile/security", icon: "profile" },
   ],

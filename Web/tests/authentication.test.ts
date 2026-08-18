@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from "vitest";
 import { AuthenticationService } from "@/server/auth/authentication-service";
 import { hashPassword } from "@/server/auth/passwords";
 import type { AuthenticationUser } from "@/server/repositories/user-repository";
-import { parseAuthJsCredentials } from "@/lib/contracts/auth";
 
 const activeUser: AuthenticationUser = {
   id: "66bb4f8b683bb83a83c26111",
@@ -28,23 +27,6 @@ function serviceFor(user: AuthenticationUser | null, allowed = true) {
 }
 
 describe("AuthenticationService", () => {
-  it("extracts credentials from an Auth.js callback body containing framework fields", () => {
-    const parsed = parseAuthJsCredentials({
-      email: " Admin@Example.com ",
-      password: "CorrectPassword!1",
-      csrfToken: "framework-managed-token",
-      callbackUrl: "http://localhost:3000/login",
-    });
-
-    expect(parsed.success).toBe(true);
-    if (parsed.success) {
-      expect(parsed.data).toEqual({
-        email: "Admin@Example.com",
-        password: "CorrectPassword!1",
-      });
-    }
-  });
-
   it("uses the same safe failure for an unknown email and a wrong password", async () => {
     const unknown = await serviceFor(null).authenticate(
       { email: "unknown@example.com", password: "WrongPassword!1" },

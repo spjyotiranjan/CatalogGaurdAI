@@ -60,10 +60,7 @@ export function errorResponse(
     retryable: appError.retryable,
   };
   if (appError.status >= 500) {
-    logger.error("Request failed", {
-      ...logContext,
-      errorType: error instanceof Error ? error.name : "UnknownError",
-    });
+    logger.error("Request failed", logContext);
   } else {
     logger.warn("Request rejected", logContext);
   }

@@ -1,7 +1,7 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 
-import { parseAuthJsCredentials } from "@/lib/contracts/auth";
+import { loginCredentialsSchema } from "@/lib/contracts/auth";
 import { resolveCorrelationId } from "@/lib/request/correlation-id";
 import {
   auditAuthenticationFailure,
@@ -52,7 +52,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
       async authorize(rawCredentials, request) {
         const correlationId = resolveCorrelationId(request.headers);
-        const parsed = parseAuthJsCredentials(rawCredentials);
+        const parsed = loginCredentialsSchema.safeParse(rawCredentials);
         if (!parsed.success) {
           const suppliedEmail =
             typeof rawCredentials?.email === "string"
