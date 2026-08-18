@@ -15,6 +15,12 @@ Web outbox -> FastAPI job API -> durable queue/worker
 
 There is no browser-to-FastAPI path and no FastAPI route that decides a review outcome or customer visibility.
 
+### Phase 1 Web bridge
+
+The Phase 1 bridge is contract-only: Web verifies the signed `ValidationJobResult v1` fixture using the shared D-012 canonical HMAC message and records an auditable receipt after durable nonce replay protection. It does not execute a worker callback or apply canonical catalog effects. The live sequence shown above is introduced incrementally by the later feed, validation, and callback phases.
+
+The executable endpoint and model inventory is `/openapi.json`, rendered at `/docs` by FastAPI Swagger UI when `CATALOGGUARD_ENABLE_API_DOCS=true`. Pydantic models remain the schema source. Document all D-012 security headers, response/error variants, and synthetic non-sensitive examples. Reconcile this inventory and its drift tests in every phase; production documentation is disabled by default.
+
 ## Execution context
 
 Every job/service method takes explicit context:
@@ -47,7 +53,7 @@ The idempotency key maps to exactly one logical job/result. Store attempt count,
 
 ## Parser and normalizer contract
 
-The phase-one parser accepts CSV only. Before reading, verify private object identity, file size, signature/MIME where available, declared checksum, and mapping version. Parse as streams/batches, not a complete unbounded in-memory file.
+The first parser supports CSV only. For every real workflow, read the job-granted object from Cloudflare R2 through a scoped, read-only adapter. `.env.local` selects the isolated local-development bucket and `.env.prod` selects the isolated production bucket. Before parsing, verify object identity, file size, signature/MIME where available, declared checksum, and mapping version. Parse as streams/batches, not a complete unbounded in-memory file. The Phase 1 fake adapter is retained only for unit, contract, and isolated integration tests.
 
 For each row return or retain:
 

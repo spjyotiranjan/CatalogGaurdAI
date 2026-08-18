@@ -8,16 +8,18 @@ The Web application is the user-facing Next.js product and normal backend. It st
 
 | Area | Routes and primary purpose | Allowed roles |
 | --- | --- | --- |
-| Shared | `/sign-in`, `/reset-password`, `/profile`, access denied, session expired | public for entry routes; authenticated for profile. |
+| Shared | `/login`, `/reset-password`, `/profile`, access denied, session expired | public for entry routes; authenticated for profile. |
 | Seller | `/seller/dashboard`, `/seller/feeds/new`, `/seller/feeds`, `/seller/feeds/[feedId]`, `/seller/products`, `/seller/products/[productId]/correct` | `SELLER_OPERATOR`, trusted seller scope. |
 | Reviewer | `/reviewer/dashboard`, `/reviewer/queue`, `/reviewer/queue/[productId]`, `/reviewer/issues`, `/reviewer/products`, `/reviewer/feeds` | `CATALOG_REVIEWER` or `ADMIN` where appropriate. |
-| Administrator | `/admin/dashboard`, `/admin/feeds`, `/admin/products`, `/admin/sellers`, `/admin/users`, `/admin/categories`, `/admin/validation-rules`, `/admin/audit-log` | `ADMIN`. |
+| Administrator | `/admin/access-requests`, `/admin/dashboard`, `/admin/feeds`, `/admin/products`, `/admin/sellers`, `/admin/users`, `/admin/categories`, `/admin/validation-rules`, `/admin/audit-log` | `ADMIN`. |
 
 Direct navigation must work when authorized. A missing role is `403`, a missing resource is `404`, and a session-expired mutation prompts reauthentication without submitting the original action.
 
 ## API surface and service ownership
 
 Route names may change, but each capability must have an equivalent typed schema, service, authorization check, audit behavior, and test.
+
+The executable backend inventory is `/api/openapi.json`, rendered at `/api/docs` by Swagger UI when `API_DOCS_ENABLED=true`. Generate component schemas from runtime Zod contracts, document authentication/authorization and same-origin requirements, and use only synthetic non-sensitive examples. Reconcile this inventory and its drift tests in every backend phase; production documentation is disabled by default.
 
 | Capability | Representative endpoint/action | Service rules |
 | --- | --- | --- |
@@ -28,6 +30,9 @@ Route names may change, but each capability must have an equivalent typed schema
 | Correction | `POST /api/products/:id/corrections`, `POST /api/products/:id/revalidate` | Current-version check, new version, audit, validation dispatch. |
 | Review queue | `GET /api/review-queue`, `GET /api/issues` | Reviewer/admin only; stable indexed ordering and filters. |
 | Decision | `POST /api/products/:id/review-decisions` | Recheck role, product version, unresolved issues, idempotency, transaction, audit. |
+| Access request | `POST /api/access-requests` | Public seller/reviewer proposal only; validate and hash submitted credentials, create no active account, return safe field errors, and audit submission. |
+| Access-request administration | `GET /api/admin/access-requests`, `POST /api/admin/access-requests/:id/approve`, `POST /api/admin/access-requests/:id/revoke`, `POST /api/admin/access-requests/:id/dismiss` | Active administrator only and same-origin protected for mutations. Approve/revoke notes are optional; approval atomically provisions the scoped active identity. Dismissal is per administrator and preserves the request/audit record. |
+| Administrator bootstrap | `POST /api/internal/bootstrap/admin` | Server-only bootstrap-secret header; creates a named administrator and supports multiple administrators. Never expose this operation or its secret in product UI. |
 | Administration | seller/user/category/rule management actions | Admin only; explicit override reason and audit for exceptional actions. |
 | Reporting | `POST /api/exports` | Same role/scope/filter rules as displayed data; large exports asynchronous. |
 
@@ -43,7 +48,7 @@ Route names may change, but each capability must have an equivalent typed schema
 
 ```text
 Seller -> Web: choose CSV + configuration
-Web -> storage: private object upload
+Web -> Cloudflare R2: private object upload
 Web -> MongoDB: FEED_UPLOAD + checksum + outbox (commit)
 Web -> Orchestration: ValidationJobRequest v1
 Orchestration -> Web: signed ValidationJobResult v1 callback
@@ -52,6 +57,12 @@ Web -> seller/reviewer: persisted status and next permitted action
 ```
 
 The browser never calls FastAPI directly, never receives internal storage identifiers, and never supplies a trusted `sellerId` for a seller-owned request.
+
+### Phase 1 bridge boundary
+
+Before any live feed work, Web and Orchestration share strict `ValidationJobRequest v1` and `ValidationJobResult v1` contracts plus D-012 HMAC-SHA256 signing. Web verifies the exact signed callback bytes, service/key identity, timestamp, nonce, callback actor, and correlation ID at `POST /api/internal/validation-results`. It stores a durable replay nonce and append-only receipt audit event only; it must not create products, issues, or other canonical effects from the Phase 1 fixture. Real dispatch starts in Phase 2, while durable processing and result application follow their respective later phases.
+
+Real local-development and production feed flows both use private Cloudflare R2. `.env.local` selects the dedicated local-development bucket; `.env.prod` selects the separate production bucket. The corresponding Web and Orchestration environment files target the same bucket for that environment with separate least-privilege credentials. Fake object storage is permitted only inside automated tests.
 
 ## UX implementation requirements
 
@@ -72,5 +83,6 @@ The supplied visual design defines a sober operational console: dark role rail, 
 | Result callback | invalid signature/schema/replay rejected; duplicate result does not duplicate rows/issues/audit; valid result is visible in feed detail. |
 | Correction | source remains immutable, new version created, stale version conflicts, revalidation dispatched. |
 | Review | only eligible reviewer/admin can decide; errors/blockers prevent approval; reject/request changes require note; decision immutable/audited. |
+| Controlled onboarding | seller/reviewer proposal creates no active identity; only an active administrator can approve/revoke; approval provisions the correct role/seller scope atomically; optional decision note is accepted; dismissal hides a completed record only for the dismissing administrator and remains auditable. |
 | Readiness | only approved current version with active seller, valid category/price/inventory/fields and no blockers becomes ready. |
 | Access | seller A cannot read/export/mutate seller B; disabled sessions are rejected; admin-only surfaces do not leak to reviewers. |
