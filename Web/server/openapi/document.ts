@@ -4,6 +4,13 @@ import { z } from "zod";
 
 import { accountResponseSchema } from "@/lib/contracts/account";
 import {
+  accessRequestListSchema,
+  accessRequestSubmissionSchema,
+  bootstrapAdminSchema,
+  createAccessRequestSchema,
+  decideAccessRequestSchema,
+} from "@/lib/contracts/access-requests";
+import {
   loginCredentialsSchema,
   passwordChangeSchema,
 } from "@/lib/contracts/auth";
@@ -114,6 +121,8 @@ export function createOpenApiDocument(): OpenApiDocument {
       { name: "Operations", description: "Liveness, dependency readiness, and API documentation." },
       { name: "Authentication", description: "Auth.js credential session lifecycle endpoints." },
       { name: "Account", description: "Authenticated account profile and credential maintenance." },
+      { name: "Access Requests", description: "Public seller/reviewer proposals and administrator decisions." },
+      { name: "Bootstrap", description: "One-time first-administrator provisioning." },
     ],
     paths: {
       "/api/health": {
@@ -381,6 +390,63 @@ export function createOpenApiDocument(): OpenApiDocument {
           },
         },
       },
+      "/api/access-requests": {
+        post: {
+          tags: ["Access Requests"], operationId: "submitAccessRequest", summary: "Submit a seller or reviewer access request",
+          description: "Creates a pending proposal with a bcrypt-hashed credential. Submission never creates an active account.",
+          parameters: [correlationParameter],
+          requestBody: { required: true, content: jsonContent("CreateAccessRequest", { role: "CATALOG_REVIEWER", fullName: "Example Reviewer", email: "reviewer@example.test", password: "Example-strong-password!1", proposal: "I have experience reviewing marketplace catalog data and validation findings." }) },
+          responses: {
+            "201": successResponse("Access request submitted for administrator review.", "AccessRequestSubmission", { data: { id: "66bb4f8b683bb83a83c26110" } }),
+            "400": errorResponse("The access-request payload is invalid.", "VALIDATION_FAILED"),
+            "409": errorResponse("A pending request or account already exists for this email.", "CONFLICT"),
+            "500": errorResponse("The access request could not be submitted.", "INTERNAL_ERROR", true),
+          },
+        },
+      },
+      "/api/admin/access-requests": {
+        get: {
+          tags: ["Access Requests"], operationId: "listAccessRequests", summary: "List access requests",
+          description: "Returns seller and reviewer proposals. Requires an active administrator session.", parameters: [correlationParameter], security: [{ authSessionCookie: [] }],
+          responses: { "200": successResponse("Access requests.", "AccessRequestList"), "401": errorResponse("Authentication is required.", "AUTHENTICATION_REQUIRED"), "403": errorResponse("Administrator access is required.", "AUTHORIZATION_DENIED") },
+        },
+      },
+      "/api/admin/access-requests/{id}/approve": {
+        post: {
+          tags: ["Access Requests"], operationId: "approveAccessRequest", summary: "Approve a pending access request",
+          description: "Requires an active administrator and same-origin request. Creates an active reviewer, or an active seller plus seller operator, in one transaction. A decision note is optional; send an empty JSON object when no note is needed.",
+          parameters: [correlationParameter, { name: "id", in: "path", required: true, schema: { type: "string", pattern: "^[a-fA-F0-9]{24}$" } }, { name: "Origin", in: "header", required: true, schema: { type: "string", format: "uri" } }], security: [{ authSessionCookie: [] }],
+          requestBody: { required: true, content: jsonContent("AccessRequestDecision", { reason: "Business and identity checks completed." }) },
+          responses: { "204": { description: "Request approved and account activation committed.", headers: { "X-Correlation-ID": correlationHeader } }, "401": errorResponse("Authentication is required.", "AUTHENTICATION_REQUIRED"), "403": errorResponse("Administrator access or same-origin request is required.", "AUTHORIZATION_DENIED"), "409": errorResponse("The request is no longer pending.", "CONFLICT") },
+        },
+      },
+      "/api/admin/access-requests/{id}/revoke": {
+        post: {
+          tags: ["Access Requests"], operationId: "revokeAccessRequest", summary: "Revoke a pending access request",
+          description: "Requires an active administrator and same-origin request. Revocation is auditable and does not create an account. A decision note is optional; send an empty JSON object when no note is needed.",
+          parameters: [correlationParameter, { name: "id", in: "path", required: true, schema: { type: "string", pattern: "^[a-fA-F0-9]{24}$" } }, { name: "Origin", in: "header", required: true, schema: { type: "string", format: "uri" } }], security: [{ authSessionCookie: [] }],
+          requestBody: { required: true, content: jsonContent("AccessRequestDecision", { reason: "The proposal does not meet onboarding requirements." }) },
+          responses: { "204": { description: "Request revoked.", headers: { "X-Correlation-ID": correlationHeader } }, "401": errorResponse("Authentication is required.", "AUTHENTICATION_REQUIRED"), "403": errorResponse("Administrator access or same-origin request is required.", "AUTHORIZATION_DENIED"), "409": errorResponse("The request is no longer pending.", "CONFLICT") },
+        },
+      },
+      "/api/admin/access-requests/{id}/dismiss": {
+        post: {
+          tags: ["Access Requests"], operationId: "dismissAccessRequest", summary: "Dismiss a completed access request from the current administrator's view",
+          description: "Requires an active administrator and same-origin request. Dismissal is per administrator, preserves the access request and its audit history, and only applies to approved or revoked requests.",
+          parameters: [correlationParameter, { name: "id", in: "path", required: true, schema: { type: "string", pattern: "^[a-fA-F0-9]{24}$" } }, { name: "Origin", in: "header", required: true, schema: { type: "string", format: "uri" } }], security: [{ authSessionCookie: [] }],
+          requestBody: { required: true, content: jsonContent("AccessRequestDecision", {}) },
+          responses: { "204": { description: "Request dismissed from the current administrator's view.", headers: { "X-Correlation-ID": correlationHeader } }, "401": errorResponse("Authentication is required.", "AUTHENTICATION_REQUIRED"), "403": errorResponse("Administrator access or same-origin request is required.", "AUTHORIZATION_DENIED"), "409": errorResponse("Only completed access requests can be dismissed.", "CONFLICT") },
+        },
+      },
+      "/api/internal/bootstrap/admin": {
+        post: {
+          tags: ["Bootstrap"], operationId: "provisionAdministrator", summary: "Create an administrator",
+          description: "Enabled only when `BOOTSTRAP_ADMIN_SECRET` is configured. This protected server-to-server endpoint can provision multiple administrators. Do not expose the bootstrap secret in browsers, logs, or Swagger's authorization storage.",
+          parameters: [correlationParameter, { name: "X-CatalogGuard-Bootstrap-Secret", in: "header", required: true, schema: { type: "string", format: "password" } }],
+          requestBody: { required: true, content: jsonContent("BootstrapAdmin", { fullName: "Platform Administrator", email: "admin@example.test", password: "Example-strong-password!1" }) },
+          responses: { "201": successResponse("Administrator created.", "AccountResponse"), "400": errorResponse("The bootstrap payload is invalid.", "VALIDATION_FAILED"), "403": errorResponse("Bootstrap authorization failed.", "AUTHORIZATION_DENIED"), "409": errorResponse("An account already exists for this email.", "CONFLICT") },
+        },
+      },
       "/api/openapi.json": {
         get: {
           tags: ["Operations"],
@@ -415,6 +481,11 @@ export function createOpenApiDocument(): OpenApiDocument {
         ReadinessResponse: componentSchema(readinessResponseSchema),
         ErrorEnvelope: componentSchema(errorEnvelopeSchema),
         AccountResponse: componentSchema(accountResponseSchema),
+        CreateAccessRequest: componentSchema(createAccessRequestSchema, "input"),
+        AccessRequestSubmission: componentSchema(accessRequestSubmissionSchema),
+        AccessRequestList: componentSchema(accessRequestListSchema),
+        AccessRequestDecision: componentSchema(decideAccessRequestSchema, "input"),
+        BootstrapAdmin: componentSchema(bootstrapAdminSchema, "input"),
         PasswordChangeRequest: componentSchema(passwordChangeSchema, "input"),
         LoginCredentials: componentSchema(loginCredentialsSchema, "input"),
         CredentialsCallbackRequest: componentSchema(credentialsCallbackSchema, "input"),

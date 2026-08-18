@@ -1,11 +1,11 @@
 import { AppShell } from "@/components/shell/AppShell";
 import { MetricCard } from "@/components/ui/Cards";
 import { generateReviewerMetrics } from "@/lib/fixtures/metrics";
-import { getMockSession } from "@/lib/fixtures/getSession";
+import { requirePageSession } from "@/server/auth/page-session";
 
 /** Screen 09 — Reviewer Dashboard (fixture stub). Full queue is UI Phase 4. */
-export default function ReviewerDashboardPage() {
-  const user = getMockSession("CATALOG_REVIEWER");
+export default async function ReviewerDashboardPage() {
+  const user = await requirePageSession(["CATALOG_REVIEWER", "ADMIN"]);
   const metrics = generateReviewerMetrics();
 
   return (

@@ -151,6 +151,7 @@ export const phaseOneFoundationMigration: DatabaseMigration = {
             "REVIEW",
             "ISSUE",
             "AUTH",
+            "ACCESS_REQUEST",
           ],
         },
         entityId: { bsonType: ["objectId", "null"] },
