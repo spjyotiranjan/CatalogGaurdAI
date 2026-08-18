@@ -46,6 +46,10 @@ function toAuthorizationUser(user: {
 }
 
 export class UserRepository {
+  async hasActiveAdmin(): Promise<boolean> {
+    await connectToDatabase();
+    return Boolean(await UserModel.exists({ role: "ADMIN", status: "ACTIVE" }));
+  }
   async findForAuthenticationByEmail(email: string): Promise<AuthenticationUser | null> {
     await connectToDatabase();
     const user = await UserModel.findOne({ email: normalizeEmail(email) })

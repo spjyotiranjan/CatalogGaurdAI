@@ -48,6 +48,27 @@ Every phase must reconcile `/api/openapi.json` and `/api/docs` with its implemen
 
 **Verification evidence:** `npm run typecheck`, `npm run lint`, and `npm run build` pass. `npm test` passes 11 files and 33 tests, covering OpenAPI drift/security/model/availability checks, environment validation, safe errors/logging, correlation propagation, password hashing, CSRF origin checks, unauthenticated and disabled-user rejection, role denial, cross-seller isolation, model invariants, repeatable real-MongoDB migration/index validation, and transactional login auditing. A live documentation smoke check returned `200` for `/api/openapi.json` and `/api/docs`; the production-server behavior checks remain liveness `200`, anonymous Auth.js session `200` with `null`, protected account access `401`, and readiness `503` when MongoDB is intentionally unavailable.
 
+## Sub Phase 1.5 - Access requests and administrator approval
+
+**Goal:** Let prospective sellers and reviewers submit a controlled proposal while preserving administrator-only authority over account activation.
+
+- Public users may submit seller-onboarding or reviewer-access proposals through `POST /api/access-requests`. Passwords are bcrypt-hashed before persistence in an `ACCESS_REQUEST`; no active account is created on submission.
+- An authenticated administrator may use `GET /api/admin/access-requests` and the protected approve/revoke actions. Approval and revocation notes are optional. Approval is transactional: reviewer approval creates an active reviewer; seller approval creates an active seller and linked seller operator.
+- The protected `POST /api/admin/access-requests/{id}/dismiss` action hides only completed approved/revoked records from the acting administrator's list. It does not delete the request or audit history, and it remains visible to other administrators.
+- Support controlled manual administrator provisioning through `POST /api/internal/bootstrap/admin` and the server-only bootstrap-secret header. It may create multiple administrators; it is not a one-time bootstrap switch.
+- Keep raw credentials out of logs and audit snapshots. Write append-only submitted, approved, revoked, and dismissed access-request audit events; enforce one pending request or user account per email; and return only safe, field-addressable error envelopes.
+- Ship migrations `002-access-requests` and `003-access-request-dismissals` with the normal migration runner. The email/invitation/notification layer is intentionally deferred. An approved user can sign in using the submitted credentials.
+
+**Exit criteria:** Public submission cannot grant authority; only an active administrator can decide a pending request; approval creates correctly scoped active identities atomically; revocation and dismissal are auditable; a dismissed record stays preserved but does not reappear for that administrator.
+
+### Sub Phase 1.5 completion record - 2026-08-18
+
+**Status:** Complete.
+
+**Implemented:** Typed access-request contracts, public proposal submission, active-admin-only review and decision endpoints, transactionally provisioned reviewer/seller identities, per-administrator dismissal, multi-admin bootstrap provisioning, migrations, audit events, and matching OpenAPI/Swagger operations. Decision notes are optional, and safe field errors are returned for proposal validation. The UI integration is recorded in the UI plan as the matching M1.5 slice.
+
+**Operational note:** Apply the access-request migrations with `npm.cmd run db:migrate` for each environment before using the feature.
+
 ## Phase 2 - Private feed intake and validation-job dispatch
 
 **Goal:** Persist a CSV upload safely and deliver exactly one trusted job to Orchestration.

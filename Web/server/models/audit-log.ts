@@ -12,6 +12,7 @@ export const auditEntityTypes = [
   "REVIEW",
   "ISSUE",
   "AUTH",
+  "ACCESS_REQUEST",
 ] as const;
 
 const auditLogSchema = new Schema(

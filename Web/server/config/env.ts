@@ -36,6 +36,7 @@ const environmentSchema = z
     LOGIN_RATE_LIMIT_MAX_ATTEMPTS: integerFromEnvironment(1, 100),
     LOG_LEVEL: z.enum(["debug", "info", "warn", "error", "silent"]),
     API_DOCS_ENABLED: booleanFromEnvironment,
+    BOOTSTRAP_ADMIN_SECRET: z.string().min(32).optional(),
   })
   .strict()
   .superRefine((value, context) => {
@@ -94,6 +95,7 @@ function rawEnvironment() {
     API_DOCS_ENABLED:
       process.env.API_DOCS_ENABLED ??
       (catalogguardEnvironment === "production" ? "false" : "true"),
+    BOOTSTRAP_ADMIN_SECRET: process.env.BOOTSTRAP_ADMIN_SECRET,
   };
 }
 
