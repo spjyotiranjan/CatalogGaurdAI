@@ -1,7 +1,7 @@
 import { AppShell } from "@/components/shell/AppShell";
 import { MetricCard } from "@/components/ui/Cards";
 import { generateSellerMetrics } from "@/lib/fixtures/metrics";
-import { requirePageSession } from "@/server/auth/page-session";
+import { getMockSession } from "@/lib/fixtures/getSession";
 
 /**
  * Screen 03 — Seller Dashboard (fixture stub).
@@ -11,8 +11,8 @@ import { requirePageSession } from "@/server/auth/page-session";
  * regions belong to UI Phase 2. This stub proves AppShell + RoleNav +
  * MetricCard render together, populated with randomized mock data.
  */
-export default async function SellerDashboardPage() {
-  const user = await requirePageSession(["SELLER_OPERATOR"]);
+export default function SellerDashboardPage() {
+  const user = getMockSession("SELLER_OPERATOR");
   const metrics = generateSellerMetrics();
 
   return (

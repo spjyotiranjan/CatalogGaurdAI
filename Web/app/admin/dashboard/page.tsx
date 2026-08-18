@@ -1,11 +1,11 @@
 import { AppShell } from "@/components/shell/AppShell";
 import { MetricCard } from "@/components/ui/Cards";
 import { generateAdminMetrics } from "@/lib/fixtures/metrics";
-import { requirePageSession } from "@/server/auth/page-session";
+import { getMockSession } from "@/lib/fixtures/getSession";
 
 /** Screen 15 — Administrator Dashboard (fixture stub). Full modules are UI Phase 5. */
-export default async function AdminDashboardPage() {
-  const user = await requirePageSession(["ADMIN"]);
+export default function AdminDashboardPage() {
+  const user = getMockSession("ADMIN");
   const metrics = generateAdminMetrics();
 
   return (

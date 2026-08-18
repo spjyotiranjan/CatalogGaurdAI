@@ -110,15 +110,8 @@ describe("Phase 1 database migration", () => {
 
     const history = await database
       .collection("_schema_migrations")
-      .find({ id: "003-access-request-dismissals" })
+      .find({ id: "001-phase-one-foundation" })
       .toArray();
     expect(history).toHaveLength(1);
-
-    const accessRequestIndexes = await database.collection("access_requests").indexes();
-    expect(accessRequestIndexes).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ name: "access_request_dismissed_status" }),
-      ]),
-    );
   });
 });

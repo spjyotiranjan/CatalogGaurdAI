@@ -15,7 +15,6 @@ const PATHS: Record<NavIconName, string> = {
   categories: "M4 6h6v6H4V6Zm10 0h6v6h-6V6ZM4 16h6v2H4v-2Zm10 0h6v2h-6v-2Z",
   rules: "M9 3h6l1 3h3v2h-2l-2 13H7L5 8H3V6h3l1-3Zm2 6v7m2-7v7",
   audit: "M5 4h11l3 3v13H5V4Zm3 6h7m-7 4h7m-7 4h4",
-  requests: "M5 4h11l3 3v13H5V4Zm3 6h7m-7 4h7m-7 4h4M15 17l1.5 1.5L20 15",
 };
 
 export function NavIcon({ name, className }: { name: NavIconName; className?: string }) {

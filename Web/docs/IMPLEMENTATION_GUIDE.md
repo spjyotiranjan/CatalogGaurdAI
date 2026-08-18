@@ -8,10 +8,10 @@ The Web application is the user-facing Next.js product and normal backend. It st
 
 | Area | Routes and primary purpose | Allowed roles |
 | --- | --- | --- |
-| Shared | `/login`, `/reset-password`, `/profile`, access denied, session expired | public for entry routes; authenticated for profile. |
+| Shared | `/sign-in`, `/reset-password`, `/profile`, access denied, session expired | public for entry routes; authenticated for profile. |
 | Seller | `/seller/dashboard`, `/seller/feeds/new`, `/seller/feeds`, `/seller/feeds/[feedId]`, `/seller/products`, `/seller/products/[productId]/correct` | `SELLER_OPERATOR`, trusted seller scope. |
 | Reviewer | `/reviewer/dashboard`, `/reviewer/queue`, `/reviewer/queue/[productId]`, `/reviewer/issues`, `/reviewer/products`, `/reviewer/feeds` | `CATALOG_REVIEWER` or `ADMIN` where appropriate. |
-| Administrator | `/admin/access-requests`, `/admin/dashboard`, `/admin/feeds`, `/admin/products`, `/admin/sellers`, `/admin/users`, `/admin/categories`, `/admin/validation-rules`, `/admin/audit-log` | `ADMIN`. |
+| Administrator | `/admin/dashboard`, `/admin/feeds`, `/admin/products`, `/admin/sellers`, `/admin/users`, `/admin/categories`, `/admin/validation-rules`, `/admin/audit-log` | `ADMIN`. |
 
 Direct navigation must work when authorized. A missing role is `403`, a missing resource is `404`, and a session-expired mutation prompts reauthentication without submitting the original action.
 
@@ -30,9 +30,6 @@ The executable backend inventory is `/api/openapi.json`, rendered at `/api/docs`
 | Correction | `POST /api/products/:id/corrections`, `POST /api/products/:id/revalidate` | Current-version check, new version, audit, validation dispatch. |
 | Review queue | `GET /api/review-queue`, `GET /api/issues` | Reviewer/admin only; stable indexed ordering and filters. |
 | Decision | `POST /api/products/:id/review-decisions` | Recheck role, product version, unresolved issues, idempotency, transaction, audit. |
-| Access request | `POST /api/access-requests` | Public seller/reviewer proposal only; validate and hash submitted credentials, create no active account, return safe field errors, and audit submission. |
-| Access-request administration | `GET /api/admin/access-requests`, `POST /api/admin/access-requests/:id/approve`, `POST /api/admin/access-requests/:id/revoke`, `POST /api/admin/access-requests/:id/dismiss` | Active administrator only and same-origin protected for mutations. Approve/revoke notes are optional; approval atomically provisions the scoped active identity. Dismissal is per administrator and preserves the request/audit record. |
-| Administrator bootstrap | `POST /api/internal/bootstrap/admin` | Server-only bootstrap-secret header; creates a named administrator and supports multiple administrators. Never expose this operation or its secret in product UI. |
 | Administration | seller/user/category/rule management actions | Admin only; explicit override reason and audit for exceptional actions. |
 | Reporting | `POST /api/exports` | Same role/scope/filter rules as displayed data; large exports asynchronous. |
 
@@ -79,6 +76,5 @@ The supplied visual design defines a sober operational console: dark role rail, 
 | Result callback | invalid signature/schema/replay rejected; duplicate result does not duplicate rows/issues/audit; valid result is visible in feed detail. |
 | Correction | source remains immutable, new version created, stale version conflicts, revalidation dispatched. |
 | Review | only eligible reviewer/admin can decide; errors/blockers prevent approval; reject/request changes require note; decision immutable/audited. |
-| Controlled onboarding | seller/reviewer proposal creates no active identity; only an active administrator can approve/revoke; approval provisions the correct role/seller scope atomically; optional decision note is accepted; dismissal hides a completed record only for the dismissing administrator and remains auditable. |
 | Readiness | only approved current version with active seller, valid category/price/inventory/fields and no blockers becomes ready. |
 | Access | seller A cannot read/export/mutate seller B; disabled sessions are rejected; admin-only surfaces do not leak to reviewers. |
