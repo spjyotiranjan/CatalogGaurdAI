@@ -44,7 +44,6 @@ class Settings(BaseSettings):
 
     otel_exporter_otlp_endpoint: AnyHttpUrl | None = None
     enable_metrics: bool = True
-    enable_api_docs: bool | None = None
 
     @model_validator(mode="after")
     def validate_security_and_retry_policy(self) -> "Settings":
@@ -76,13 +75,6 @@ class Settings(BaseSettings):
         if self.environment == "production" and self.private_storage_backend == "fake":
             raise ValueError("the fake private-storage backend is forbidden in production")
         return self
-
-    @property
-    def api_docs_enabled(self) -> bool:
-        """Enable docs by default except in production; an explicit setting wins."""
-        if self.enable_api_docs is not None:
-            return self.enable_api_docs
-        return self.environment != "production"
 
 
 @lru_cache

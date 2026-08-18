@@ -37,7 +37,6 @@ No service may bypass this table for convenience. A new cross-service write path
 - Add tests with the change. Include authorization, tenant-boundary, idempotency, stale-version, and failure-path tests for every mutation when applicable.
 - Run the focused checks first, then the service suite and an end-to-end handoff test for boundary changes. Report commands run and any unverified risk in the handoff.
 - Keep secrets in validated environment configuration. Never add credentials, copied production payloads, or provider prompts to the repository.
-- Update [README.md](README.md) in the same phase whenever prerequisites, setup commands, environment-file conventions, ports, migrations, service ownership, API documentation locations, supported workflows, or current phase boundaries change.
 
 ## Stop and update the design when
 

@@ -18,7 +18,6 @@ from app.core.errors import AppError
 from app.core.logging import configure_logging
 from app.core.metrics import OrchestrationMetrics
 from app.core.middleware import CorrelationMiddleware
-from app.core.openapi import install_openapi_schema
 from app.core.telemetry import configure_telemetry
 from app.integrations.fake_storage import FakePrivateStorageClient
 from app.repositories.operational import OperationalRepository
@@ -52,18 +51,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         application.state.job_service = JobService(repository)
         yield
 
-    docs_enabled = resolved_settings.api_docs_enabled
     application = FastAPI(
         title="CatalogGuard AI Orchestration",
-        description=(
-            "Private validation-orchestration service for authenticated job intake, "
-            "operational status, deterministic validation, and signed Web callbacks. "
-            "Browser traffic to internal APIs is unsupported."
-        ),
+        description="Private validation-orchestration service. Browser traffic is unsupported.",
         version=resolved_settings.service_version,
         lifespan=lifespan,
-        openapi_url="/openapi.json" if docs_enabled else None,
-        docs_url="/docs" if docs_enabled else None,
+        docs_url=None if resolved_settings.environment == "production" else "/docs",
         redoc_url=None,
     )
     application.add_middleware(CorrelationMiddleware, logger=logger, metrics=metrics)
@@ -74,7 +67,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.include_router(jobs_router)
     if resolved_settings.enable_metrics:
         application.include_router(metrics_router)
-    install_openapi_schema(application)
 
     provider = configure_telemetry(resolved_settings)
     FastAPIInstrumentor.instrument_app(application, tracer_provider=provider)

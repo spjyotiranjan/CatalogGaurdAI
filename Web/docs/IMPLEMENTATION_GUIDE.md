@@ -19,8 +19,6 @@ Direct navigation must work when authorized. A missing role is `403`, a missing 
 
 Route names may change, but each capability must have an equivalent typed schema, service, authorization check, audit behavior, and test.
 
-The executable backend inventory is `/api/openapi.json`, rendered at `/api/docs` by Swagger UI when `API_DOCS_ENABLED=true`. Generate component schemas from runtime Zod contracts, document authentication/authorization and same-origin requirements, and use only synthetic non-sensitive examples. Reconcile this inventory and its drift tests in every backend phase; production documentation is disabled by default.
-
 | Capability | Representative endpoint/action | Service rules |
 | --- | --- | --- |
 | Feed creation | `POST /api/feeds` | Verify upload intent/object, checksum and seller scope; create feed plus outbox atomically. |
@@ -45,7 +43,7 @@ The executable backend inventory is `/api/openapi.json`, rendered at `/api/docs`
 
 ```text
 Seller -> Web: choose CSV + configuration
-Web -> Cloudflare R2: private object upload
+Web -> storage: private object upload
 Web -> MongoDB: FEED_UPLOAD + checksum + outbox (commit)
 Web -> Orchestration: ValidationJobRequest v1
 Orchestration -> Web: signed ValidationJobResult v1 callback
@@ -54,8 +52,6 @@ Web -> seller/reviewer: persisted status and next permitted action
 ```
 
 The browser never calls FastAPI directly, never receives internal storage identifiers, and never supplies a trusted `sellerId` for a seller-owned request.
-
-Real local-development and production feed flows both use private Cloudflare R2. `.env.local` selects the dedicated local-development bucket; `.env.prod` selects the separate production bucket. The corresponding Web and Orchestration environment files target the same bucket for that environment with separate least-privilege credentials. Fake object storage is permitted only inside automated tests.
 
 ## UX implementation requirements
 
