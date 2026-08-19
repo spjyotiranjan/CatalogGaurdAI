@@ -47,9 +47,9 @@ async def test_newer_operational_schema_rejects_an_older_service(
     await repository.migrate()
     async with aiosqlite.connect(database_path) as connection:
         await connection.execute(
-            "INSERT INTO schema_migrations(version, applied_at) VALUES (2, 'future')"
+            "INSERT INTO schema_migrations(version, applied_at) VALUES (3, 'future')"
         )
         await connection.commit()
 
-    with pytest.raises(RuntimeError, match="required v1, found v2"):
+    with pytest.raises(RuntimeError, match="required v2, found v3"):
         await repository.verify_schema()

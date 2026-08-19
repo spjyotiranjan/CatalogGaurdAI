@@ -50,6 +50,14 @@ Before implementing or changing a user-facing route, consult the approved [Imple
 
 **Exit criteria:** A seller can see the exact accepted/rejected state of an upload and navigate from a feed outcome to the permitted next action without ambiguous or fabricated progress.
 
+### Phase 2 completion record - 2026-08-18
+
+**Status:** Complete.
+
+- Added protected seller upload, feed-history, and feed-detail screens using real typed API contracts rather than fixtures.
+- Upload presents CSV selection and server-confirmed errors; history/detail render persisted status, integrity checksum, counts, timeline, download permission, empty/error states, and next action.
+- Active feed detail polls the backend read model only; browser timers never simulate processing completion.
+
 ## Phase 3 - Seller catalog and correction workspace
 
 **Goal:** Present versioned catalog evidence and let sellers prepare safe corrections.

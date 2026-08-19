@@ -46,6 +46,13 @@ const environmentSchema = z
     ORCHESTRATION_CALLBACK_SIGNING_SECRET: z.string().min(32).optional(),
     ORCHESTRATION_SERVICE_AUTH_MAX_CLOCK_SKEW_SECONDS: integerFromEnvironment(30, 900),
     ORCHESTRATION_REPLAY_NONCE_RETENTION_SECONDS: integerFromEnvironment(60, 3_600),
+    R2_ACCOUNT_ID: z.string().trim().min(1).optional(),
+    R2_ENDPOINT: z.url().optional(),
+    R2_BUCKET_NAME: z.string().trim().regex(/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/).optional(),
+    R2_ACCESS_KEY_ID: z.string().trim().min(16).optional(),
+    R2_SECRET_ACCESS_KEY: z.string().min(32).optional(),
+    R2_MAX_UPLOAD_BYTES: integerFromEnvironment(1_024, 26_214_400),
+    R2_DOWNLOAD_URL_TTL_SECONDS: integerFromEnvironment(30, 900),
   })
   .strict()
   .superRefine((value, context) => {
@@ -152,7 +159,27 @@ function rawEnvironment() {
     ORCHESTRATION_CALLBACK_SIGNING_SECRET: process.env.ORCHESTRATION_CALLBACK_SIGNING_SECRET,
     ORCHESTRATION_SERVICE_AUTH_MAX_CLOCK_SKEW_SECONDS: process.env.ORCHESTRATION_SERVICE_AUTH_MAX_CLOCK_SKEW_SECONDS ?? "300",
     ORCHESTRATION_REPLAY_NONCE_RETENTION_SECONDS: process.env.ORCHESTRATION_REPLAY_NONCE_RETENTION_SECONDS ?? "900",
+    R2_ACCOUNT_ID: process.env.R2_ACCOUNT_ID,
+    R2_ENDPOINT: process.env.R2_ENDPOINT,
+    R2_BUCKET_NAME: process.env.R2_BUCKET_NAME,
+    R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID,
+    R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY,
+    R2_MAX_UPLOAD_BYTES: process.env.R2_MAX_UPLOAD_BYTES ?? "10485760",
+    R2_DOWNLOAD_URL_TTL_SECONDS: process.env.R2_DOWNLOAD_URL_TTL_SECONDS ?? "300",
   };
+}
+
+export type FeedStorageEnvironment = {
+  R2_ACCOUNT_ID: string; R2_ENDPOINT: string; R2_BUCKET_NAME: string; R2_ACCESS_KEY_ID: string; R2_SECRET_ACCESS_KEY: string;
+  R2_MAX_UPLOAD_BYTES: number; R2_DOWNLOAD_URL_TTL_SECONDS: number;
+};
+
+export function getFeedStorageEnvironment(): FeedStorageEnvironment | null {
+  const environment = getEnvironment();
+  const values = [environment.R2_ACCOUNT_ID, environment.R2_ENDPOINT, environment.R2_BUCKET_NAME, environment.R2_ACCESS_KEY_ID, environment.R2_SECRET_ACCESS_KEY];
+  if (values.every((value) => !value)) return null;
+  if (values.some((value) => !value)) throw new Error("Cloudflare R2 configuration is incomplete.");
+  return { R2_ACCOUNT_ID: environment.R2_ACCOUNT_ID!, R2_ENDPOINT: environment.R2_ENDPOINT!, R2_BUCKET_NAME: environment.R2_BUCKET_NAME!, R2_ACCESS_KEY_ID: environment.R2_ACCESS_KEY_ID!, R2_SECRET_ACCESS_KEY: environment.R2_SECRET_ACCESS_KEY!, R2_MAX_UPLOAD_BYTES: environment.R2_MAX_UPLOAD_BYTES, R2_DOWNLOAD_URL_TTL_SECONDS: environment.R2_DOWNLOAD_URL_TTL_SECONDS };
 }
 
 export function getEnvironment(): Environment {

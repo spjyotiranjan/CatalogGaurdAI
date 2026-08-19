@@ -16,6 +16,7 @@ import {
 } from "@/lib/contracts/auth";
 import { errorEnvelopeSchema } from "@/lib/contracts/errors";
 import { validationJobResultSchema } from "@/lib/contracts/orchestration";
+import { createFeedResponseSchema, feedDetailResponseSchema, feedDownloadResponseSchema, feedListResponseSchema } from "@/lib/contracts/feeds";
 import {
   authProvidersResponseSchema,
   authSessionResponseSchema,
@@ -124,6 +125,7 @@ export function createOpenApiDocument(): OpenApiDocument {
       { name: "Account", description: "Authenticated account profile and credential maintenance." },
       { name: "Access Requests", description: "Public seller/reviewer proposals and administrator decisions." },
       { name: "Bootstrap", description: "One-time first-administrator provisioning." },
+      { name: "Feeds", description: "Seller-scoped private CSV upload, status, and controlled download." },
       { name: "Internal integrations", description: "Authenticated service-to-service contracts; never invoked by a browser." },
     ],
     paths: {
@@ -453,9 +455,9 @@ export function createOpenApiDocument(): OpenApiDocument {
         post: {
           tags: ["Internal integrations"],
           operationId: "acceptOrchestrationValidationResultContract",
-          summary: "Verify a signed Orchestration v1 callback fixture",
+          summary: "Verify a signed Orchestration v1 callback and update feed progress",
           description:
-            "Phase 1 contract bridge only. Verifies the exact HMAC-bound request bytes, callback actor, clock window, and durable nonce before recording a contract-receipt audit event. It does not apply canonical feed/product/issue effects; that begins in later phases.",
+            "Verifies the exact HMAC-bound request bytes, callback actor, clock window, persisted feed-job identity, and durable nonce. It updates only feed-level status/counters and appends an audit event; canonical product, issue, and AI effects remain Phase 3 work.",
           parameters: [
             correlationParameter,
             { name: "X-CatalogGuard-Key-Version", in: "header", required: true, schema: { type: "string" } },
@@ -466,7 +468,7 @@ export function createOpenApiDocument(): OpenApiDocument {
           ],
           requestBody: { required: true, content: jsonContent("ValidationJobResultV1") },
           responses: {
-            "204": { description: "Signed v1 callback fixture accepted and audited. No canonical data is applied.", headers: { "X-Correlation-ID": correlationHeader } },
+            "204": { description: "Signed v1 callback accepted; feed progress is updated without canonical catalog mutation.", headers: { "X-Correlation-ID": correlationHeader } },
             "401": errorResponse("Service authentication failed or the message is stale.", "SERVICE_AUTHENTICATION_FAILED"),
             "403": errorResponse("The authenticated service does not match the callback actor.", "ACTOR_IDENTITY_MISMATCH"),
             "409": errorResponse("The callback correlation ID mismatches or nonce was already processed.", "SERVICE_MESSAGE_REPLAYED"),
@@ -475,6 +477,12 @@ export function createOpenApiDocument(): OpenApiDocument {
           },
         },
       },
+      "/api/feeds": {
+        get: { tags: ["Feeds"], operationId: "listSellerFeeds", summary: "List the active seller's feeds", description: "Returns a bounded, seller-scoped feed history projection. Storage object keys, credentials, and raw source content are never returned.", parameters: [correlationParameter, { name: "cursor", in: "query", required: false, schema: { type: "string", pattern: "^[a-fA-F0-9]{24}$" } }], security: [{ authSessionCookie: [] }], responses: { "200": successResponse("Seller feed history.", "FeedListResponse"), "401": errorResponse("Authentication is required.", "AUTHENTICATION_REQUIRED"), "403": errorResponse("Seller access is required.", "AUTHORIZATION_DENIED") } },
+        post: { tags: ["Feeds"], operationId: "createSellerFeed", summary: "Store a private CSV and dispatch validation", description: "Requires an active seller session and same-origin multipart request. Validates CSV filename/type/basic structure, calculates checksum, stores one immutable private R2 object, persists the feed and audit event, then sends its signed idempotent job to Orchestration. Browser callers never receive storage identifiers.", parameters: [correlationParameter, { name: "Origin", in: "header", required: true, schema: { type: "string", format: "uri" } }], security: [{ authSessionCookie: [] }], requestBody: { required: true, content: { "multipart/form-data": { schema: { type: "object", required: ["file"], properties: { file: { type: "string", format: "binary", description: "CSV product listing, at most the configured private-upload limit." } }, additionalProperties: false } } } }, responses: { "201": successResponse("Private feed stored and signed validation job accepted.", "CreateFeedResponse"), "400": errorResponse("The CSV is missing or malformed.", "FILE_REJECTED"), "409": errorResponse("The same checksum already exists for this seller.", "DUPLICATE_UPLOAD"), "413": errorResponse("The CSV exceeds the configured upload size.", "FILE_REJECTED"), "503": errorResponse("Storage or Orchestration dispatch is unavailable; no catalog data was created.", "FEED_DISPATCH_FAILED", true) } },
+      },
+      "/api/feeds/{id}": { get: { tags: ["Feeds"], operationId: "getSellerFeed", summary: "Read one seller-scoped feed", description: "Returns the persisted processing timeline, source-integrity projection, status counters, and permitted action for a feed in the active seller scope.", parameters: [correlationParameter, { name: "id", in: "path", required: true, schema: { type: "string", pattern: "^[a-fA-F0-9]{24}$" } }], security: [{ authSessionCookie: [] }], responses: { "200": successResponse("Seller feed detail.", "FeedDetailResponse"), "401": errorResponse("Authentication is required.", "AUTHENTICATION_REQUIRED"), "403": errorResponse("Seller access is required.", "AUTHORIZATION_DENIED"), "404": errorResponse("The feed is not in the active seller scope.", "FEED_NOT_FOUND") } } },
+      "/api/feeds/{id}/download": { post: { tags: ["Feeds"], operationId: "createSellerFeedDownload", summary: "Create a short-lived private CSV download", description: "Requires an active seller session and same-origin request. Authorizes the feed in the trusted seller scope before returning a short-lived R2 URL; the storage key is never exposed.", parameters: [correlationParameter, { name: "id", in: "path", required: true, schema: { type: "string", pattern: "^[a-fA-F0-9]{24}$" } }, { name: "Origin", in: "header", required: true, schema: { type: "string", format: "uri" } }], security: [{ authSessionCookie: [] }], responses: { "200": successResponse("Short-lived download URL.", "FeedDownloadResponse"), "401": errorResponse("Authentication is required.", "AUTHENTICATION_REQUIRED"), "403": errorResponse("Seller access or request origin is not allowed.", "AUTHORIZATION_DENIED"), "404": errorResponse("The feed is not in the active seller scope.", "FEED_NOT_FOUND"), "503": errorResponse("Private storage is unavailable.", "DEPENDENCY_UNAVAILABLE", true) } } },
       "/api/openapi.json": {
         get: {
           tags: ["Operations"],
@@ -522,6 +530,10 @@ export function createOpenApiDocument(): OpenApiDocument {
         AuthProvidersResponse: componentSchema(authProvidersResponseSchema),
         CsrfTokenResponse: componentSchema(csrfTokenResponseSchema),
         ValidationJobResultV1: componentSchema(validationJobResultSchema, "input"),
+        CreateFeedResponse: componentSchema(createFeedResponseSchema),
+        FeedListResponse: componentSchema(feedListResponseSchema),
+        FeedDetailResponse: componentSchema(feedDetailResponseSchema),
+        FeedDownloadResponse: componentSchema(feedDownloadResponseSchema),
       },
       parameters: {
         CorrelationId: {

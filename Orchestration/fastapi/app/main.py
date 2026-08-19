@@ -21,8 +21,10 @@ from app.core.middleware import CorrelationMiddleware
 from app.core.openapi import install_openapi_schema
 from app.core.telemetry import configure_telemetry
 from app.integrations.fake_storage import FakePrivateStorageClient
+from app.integrations.storage import R2PrivateStorageClient
 from app.repositories.operational import OperationalRepository
 from app.security.service_auth import ServiceAuthenticator
+from app.services.ingestion import CsvIngestionService
 from app.services.jobs import JobService
 from app.workers.queue import DurableQueue
 
@@ -33,11 +35,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     metrics = OrchestrationMetrics()
     repository = OperationalRepository(resolved_settings.operational_db_path)
     queue = DurableQueue(repository)
-    storage = FakePrivateStorageClient(resolved_settings.fake_storage_root)
+    storage = (
+        FakePrivateStorageClient(resolved_settings.fake_storage_root)
+        if resolved_settings.private_storage_backend == "fake"
+        else R2PrivateStorageClient(resolved_settings)
+    )
 
     @asynccontextmanager
     async def lifespan(application: FastAPI) -> AsyncIterator[None]:
-        resolved_settings.fake_storage_root.mkdir(parents=True, exist_ok=True)
+        if (
+            resolved_settings.private_storage_backend == "fake"
+            and resolved_settings.fake_storage_root
+        ):
+            resolved_settings.fake_storage_root.mkdir(parents=True, exist_ok=True)
         if resolved_settings.auto_migrate_operational_store:
             await repository.migrate()
         else:
@@ -50,6 +60,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         application.state.storage = storage
         application.state.authenticator = ServiceAuthenticator(resolved_settings, repository)
         application.state.job_service = JobService(repository)
+        application.state.ingestion_service = CsvIngestionService(repository, storage)
         yield
 
     docs_enabled = resolved_settings.api_docs_enabled

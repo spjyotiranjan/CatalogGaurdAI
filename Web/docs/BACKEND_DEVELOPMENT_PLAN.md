@@ -97,6 +97,18 @@ Every phase must reconcile `/api/openapi.json` and `/api/docs` with its implemen
 
 **Exit criteria:** A valid, authorized seller CSV creates one immutable feed and one logical validation job; malformed/duplicate uploads are safe; callbacks cannot be spoofed/replayed; cross-seller access is denied; a rejected callback changes no canonical catalog data.
 
+### Phase 2 completion record - 2026-08-18
+
+**Status:** Complete.
+
+- Added immutable seller-scoped `FEED_UPLOAD` persistence and migration `005-feed-intake`: private object reference, checksum, mapping version, job/idempotency identity, safe counters, and seller/status indexes.
+- Added active-seller-only `POST /api/feeds`, `GET /api/feeds`, `GET /api/feeds/{id}`, and `POST /api/feeds/{id}/download`. Uploads are same-origin protected, CSV-only, checksum-addressed, stored privately in R2, audited, and dispatched with the signed v1 job contract. Reads derive seller scope from the active database user; no object key or credential is returned.
+- The callback now verifies persisted feed/job/checksum/idempotency identity before atomically updating feed-level state and audit alongside nonce claim. It creates no canonical products, source details, issues, or AI effects.
+- A dedicated retrying outbox consumer remains Phase 4; the Phase 2 feed holds the durable logical dispatch identity and Orchestration intake is idempotent.
+- `/api/openapi.json` and `/api/docs` now cover feed upload/list/detail/download plus the callback behavior.
+
+**Verification evidence:** `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd test` (41 tests), and `npm.cmd run build` pass.
+
 ## Phase 3 - Canonical catalog, result application, and corrections
 
 **Goal:** Convert validated results into versioned, seller-scoped catalog data.

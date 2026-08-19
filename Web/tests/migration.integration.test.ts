@@ -128,5 +128,11 @@ describe("Phase 1 database migration", () => {
         expect.objectContaining({ name: "service_message_nonce_expiry", expireAfterSeconds: 0 }),
       ]),
     );
+
+    const feedIndexes = await database.collection("feed_uploads").indexes();
+    expect(feedIndexes).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: "feed_seller_checksum_unique", unique: true }),
+      expect.objectContaining({ name: "feed_job_unique", unique: true }),
+    ]));
   });
 });

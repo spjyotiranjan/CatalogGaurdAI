@@ -24,8 +24,14 @@ class Settings(BaseSettings):
 
     operational_db_path: Path
     auto_migrate_operational_store: bool = True
-    fake_storage_root: Path
-    private_storage_backend: Literal["fake"] = "fake"
+    fake_storage_root: Path | None = None
+    private_storage_backend: Literal["fake", "r2"] = "r2"
+    r2_endpoint: AnyHttpUrl | None = None
+    r2_bucket_name: str | None = Field(default=None, min_length=3, max_length=63)
+    r2_access_key_id: SecretStr | None = None
+    r2_secret_access_key: SecretStr | None = None
+    r2_max_object_bytes: int = Field(default=10_485_760, ge=1_024, le=26_214_400)
+    csv_batch_size: int = Field(default=100, ge=1, le=1_000)
     web_service_id: str = Field(min_length=3, max_length=80)
     web_service_key_version: str = Field(min_length=1, max_length=40)
     web_service_secret: SecretStr = Field(min_length=32)
@@ -68,13 +74,27 @@ class Settings(BaseSettings):
                 )
             if not self.operational_db_path.is_absolute():
                 raise ValueError("operational_db_path must be absolute outside local environments")
-            if not self.fake_storage_root.is_absolute():
-                raise ValueError("fake_storage_root must be absolute outside local environments")
             endpoint = self.otel_exporter_otlp_endpoint
             if endpoint is None or endpoint.scheme != "https":
                 raise ValueError("an HTTPS OTLP endpoint is required in staging and production")
-        if self.environment == "production" and self.private_storage_backend == "fake":
-            raise ValueError("the fake private-storage backend is forbidden in production")
+        if self.private_storage_backend == "fake":
+            if self.environment != "test":
+                raise ValueError(
+                    "the fake private-storage backend is permitted only in automated tests"
+                )
+            if self.fake_storage_root is None:
+                raise ValueError("fake_storage_root is required for the fake test adapter")
+        elif not all(
+            (
+                self.r2_endpoint,
+                self.r2_bucket_name,
+                self.r2_access_key_id,
+                self.r2_secret_access_key,
+            )
+        ):
+            raise ValueError(
+                "complete Cloudflare R2 configuration is required outside automated tests"
+            )
         return self
 
     @property

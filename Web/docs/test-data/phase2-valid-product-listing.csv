@@ -1,0 +1,13 @@
+external_product_id,sku,title,description,category_id,currency,list_price,sale_price,inventory
+prod-1001,mouse-erg-001,Ergonomic Wireless Mouse,Comfortable wireless mouse for everyday work,64f1d0c2a1234567890abcde,usd,29.99,24.99,50
+prod-1002,kb-mech-001,Compact Mechanical Keyboard,Hot-swappable compact mechanical keyboard,64f1d0c2a1234567890abcdf,USD,89.50,79.50,35
+prod-1003,usb-c-1m,Braided USB-C Cable,One metre USB-C charging cable,,inr,499.00,,0
+prod-1004,hub-7p-001,Seven Port USB Hub,Aluminium USB hub with seven ports,64f1d0c2a1234567890abce0,EUR,44.00,39.00,18
+prod-1005,stand-lpt-001,Adjustable Laptop Stand,Foldable aluminium laptop stand,64f1d0c2a1234567890abce1,GBP,32.75,,12
+prod-1006,cam-1080-001,1080p Webcam,Full HD webcam with privacy shutter,,USD,54.99,49.99,9
+prod-1007,headset-001,Noise Isolating Headset,Wired headset with noise isolating microphone,64f1d0c2a1234567890abce2,USD,39.95,,24
+prod-1008,mat-desk-001,Extended Desk Mat,Water resistant extended desk mat,,USD,19.00,15.00,100
+prod-1009,light-ring-001,LED Monitor Light,USB powered monitor light with brightness control,64f1d0c2a1234567890abce3,USD,42.00,,7
+prod-1010,case-travel-001,Accessory Travel Case,Protective travel case for small accessories,,CAD,27.50,22.50,16
+prod-1011,adapter-usb-001,USB-C Multiport Adapter,USB-C adapter with HDMI and USB-A ports,64f1d0c2a1234567890abce4,USD,48.25,,28
+prod-1012,charger-65w-001,65W GaN Charger,Compact fast charging wall charger,,USD,59.99,54.99,40

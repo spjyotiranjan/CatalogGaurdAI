@@ -7,6 +7,7 @@ import { AppError } from "@/lib/contracts/errors";
 import { getOrchestrationBridgeEnvironment } from "@/server/config/env";
 import { auditLogRepository } from "@/server/repositories/audit-log-repository";
 import { serviceMessageNonceRepository } from "@/server/repositories/service-message-nonce-repository";
+import { feedUploadRepository } from "@/server/repositories/feed-upload-repository";
 import { createServiceExecutionContext } from "@/server/request/context";
 import type { VerifiedOrchestrationMessage } from "@/server/integrations/orchestration/signing";
 
@@ -41,18 +42,34 @@ export class OrchestrationCallbackService {
         if (!claimed) {
           throw new AppError({ code: "SERVICE_MESSAGE_REPLAYED", message: "The service message has already been processed.", status: 409 });
         }
+        const feed = await feedUploadRepository.applyCallback({
+          jobId: input.result.jobId,
+          sellerId: input.result.sellerId,
+          feedUploadId: input.result.feedUploadId,
+          checksum: input.result.checksum,
+          idempotencyKey: input.result.idempotencyKey,
+          outcome: input.result.outcome,
+          totalRows: input.result.summary.totalRows,
+          processedRows: input.result.summary.processedRows,
+          acceptedRows: input.result.summary.acceptedRows,
+          rejectedRows: input.result.summary.rejectedRows,
+          session,
+        });
+        if (!feed) {
+          throw new AppError({ code: "JOB_CONTRACT_INVALID", message: "The callback does not match a persisted feed job.", status: 409 });
+        }
         await auditLogRepository.append({
           context,
           entityType: "FEED",
           entityId: input.result.feedUploadId,
           sellerId: input.result.sellerId,
-          action: "ORCHESTRATION_CALLBACK_CONTRACT_ACCEPTED",
+          action: "ORCHESTRATION_CALLBACK_ACCEPTED",
           metadata: {
             contractVersion: input.result.contractVersion,
             jobId: input.result.jobId,
             idempotencyKey: input.result.idempotencyKey,
             outcome: input.result.outcome,
-            processedRows: input.result.summary.processedRows,
+            processedRows: input.result.summary.processedRows, feedStatus: feed.processingStatus,
           },
           session,
         });
