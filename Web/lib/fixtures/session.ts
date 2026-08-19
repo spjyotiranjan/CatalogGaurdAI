@@ -14,7 +14,6 @@ export const MOCK_SESSIONS: Record<Role, SessionUser> = {
     role: "SELLER_OPERATOR",
     sellerId: "SELL-000182",
     sellerName: "Northstar Retail",
-    mfaEnabled: false,
   },
   CATALOG_REVIEWER: {
     userId: "usr_7b13cr",
@@ -23,7 +22,6 @@ export const MOCK_SESSIONS: Record<Role, SessionUser> = {
     role: "CATALOG_REVIEWER",
     sellerId: null,
     sellerName: null,
-    mfaEnabled: true,
   },
   ADMIN: {
     userId: "usr_19d8ad",
@@ -32,7 +30,6 @@ export const MOCK_SESSIONS: Record<Role, SessionUser> = {
     role: "ADMIN",
     sellerId: null,
     sellerName: null,
-    mfaEnabled: true,
   },
 };
 

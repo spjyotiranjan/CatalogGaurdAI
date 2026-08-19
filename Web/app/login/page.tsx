@@ -1,89 +1,100 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
 import Link from "next/link";
-import { AuthSplitLayout } from "@/components/shell/AuthSplitLayout";
-import { TextField, CheckboxField } from "@/components/ui/FormControls";
-import { Button } from "@/components/ui/Button";
-import { Alert } from "@/components/ui/Cards";
-import { ROLE_HOME } from "@/lib/types/session";
-import type { Role } from "@/lib/types/session";
+import { useRouter, useSearchParams } from "next/navigation";
+import { signIn, signOut } from "next-auth/react";
 
-/**
- * Screen 01 — Sign In. Public route.
- *
- * UI-only per the Phase 1 boundary: this form does not authenticate anyone.
- * It exists to demonstrate the exact screen and to route to the fixture
- * dashboard matching the selected role, standing in for the real
- * "successful authentication opens the dashboard assigned to the active
- * role" behavior until Web Backend Phase 1 exists.
- */
-export default function LoginPage() {
+import { AuthSplitLayout } from "@/components/shell/AuthSplitLayout";
+import { Alert } from "@/components/ui/Cards";
+import { Button } from "@/components/ui/Button";
+import { TextField } from "@/components/ui/FormControls";
+import { AccessRequestModal } from "@/components/access/AccessRequestModal";
+import { fetchCurrentAccount } from "@/lib/client/account";
+import { ROLE_HOME } from "@/lib/types/session";
+
+/** Authenticates through Auth.js and redirects from the BFF-confirmed account role. */
+function LoginPageContent() {
   const router = useRouter();
-  const [email, setEmail] = useState("reviewer@marketplace.com");
+  const searchParams = useSearchParams();
+  const isAdministratorLogin = searchParams.get("returnTo") === "admin-access-requests";
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [requestRole, setRequestRole] = useState<"SELLER_OPERATOR" | "CATALOG_REVIEWER" | null>(null);
 
-  function roleFromEmail(value: string): Role {
-    if (value.includes("seller") || value.includes("northstar") || value.includes("retail")) {
-      return "SELLER_OPERATOR";
-    }
-    if (value.includes("admin") || value.startsWith("sp@")) {
-      return "ADMIN";
-    }
-    return "CATALOG_REVIEWER";
+  async function clearAuthenticatedSession(): Promise<void> {
+    await signOut({ redirect: false }).catch(() => undefined);
   }
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     setError(null);
+
     if (!email || !password) {
       setError("Enter your work email and password to continue.");
       return;
     }
+
     setSubmitting(true);
-    const role = roleFromEmail(email.toLowerCase());
-    window.setTimeout(() => {
+    let sessionCreated = false;
+    try {
+      const result = await signIn("credentials", { email, password, redirect: false });
+      if (!result?.ok || result.error) {
+        setError("The email or password is incorrect, or this account is unavailable.");
+        return;
+      }
+      sessionCreated = true;
+
+      const account = await fetchCurrentAccount();
+      if (isAdministratorLogin && account.data.role !== "ADMIN") {
+        await clearAuthenticatedSession();
+        sessionCreated = false;
+        setError("This sign-in is reserved for platform administrators. Use the standard sign-in page for your workspace.");
+        return;
+      }
+      if (!isAdministratorLogin && account.data.role === "ADMIN") {
+        await clearAuthenticatedSession();
+        sessionCreated = false;
+        setError("Administrator accounts must sign in through the administrator portal.");
+        return;
+      }
+
+      const destination =
+        account.data.role === "ADMIN" && isAdministratorLogin
+          ? "/admin/access-requests"
+          : ROLE_HOME[account.data.role];
+      router.replace(destination);
+      router.refresh();
+    } catch {
+      if (sessionCreated) {
+        await clearAuthenticatedSession();
+      }
+      setError("We could not complete sign-in. Please try again.");
+    } finally {
       setSubmitting(false);
-      router.push(ROLE_HOME[role]);
-    }, 400);
+    }
   }
 
   return (
     <AuthSplitLayout>
-      <h1 className="text-[22px] font-semibold text-[var(--cg-text-primary)]">Welcome back</h1>
+      <h1 className="text-[22px] font-semibold text-[var(--cg-text-primary)]">
+        {isAdministratorLogin ? "Administrator sign in" : "Welcome back"}
+      </h1>
       <p className="mt-1 text-[13px] text-[var(--cg-text-secondary)]">
-        Sign in to your assigned seller, reviewer or administrator workspace.
+        {isAdministratorLogin
+          ? "Sign in to review seller and reviewer access requests."
+          : "Sign in to your assigned seller or reviewer workspace."}
       </p>
 
       <form className="mt-7 flex flex-col gap-4" onSubmit={handleSubmit} noValidate>
-        <TextField
-          label="Work email"
-          type="email"
-          autoComplete="username"
-          placeholder="reviewer@marketplace.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <TextField
-          label="Password"
-          type="password"
-          autoComplete="current-password"
-          placeholder="••••••••••••"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+        <TextField label="Work email" type="email" autoComplete="username" placeholder="name@company.com" value={email} onChange={(event) => setEmail(event.target.value)} />
+        <TextField label="Password" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} />
 
-        {error ? (
-          <p role="alert" className="text-[12.5px] text-[var(--cg-red)]">
-            {error}
-          </p>
-        ) : null}
+        {error ? <p role="alert" className="text-[12.5px] text-[var(--cg-red)]">{error}</p> : null}
 
-        <div className="flex items-center justify-between">
-          <CheckboxField label="Keep me signed in on this device" />
+        <div className="flex justify-end">
           <Link href="/reset-password" className="text-[12.5px] font-medium text-[var(--cg-purple)]">
             Forgot password?
           </Link>
@@ -94,26 +105,60 @@ export default function LoginPage() {
         </Button>
 
         <p className="text-center text-[11.5px] text-[var(--cg-text-muted)]">
-          Role-based access is assigned by an administrator
+          {isAdministratorLogin
+            ? "Administrator access is granted through secure provisioning."
+            : "Role-based access is assigned by an administrator."}
         </p>
 
-        <Alert
-          tone="info"
-          title="Protected access"
-        >
-          Authentication, active-user checks, tenant isolation and role authorization run on every
-          protected request.
+        <Alert tone="info" title={isAdministratorLogin ? "Administrator access" : "Protected access"}>
+          {isAdministratorLogin
+            ? "Only active platform administrators can review and decide access requests."
+            : "Authentication, active-user checks, tenant isolation and role authorization run on every protected request."}
         </Alert>
       </form>
 
-      <p className="mt-8 text-center text-[12px] text-[var(--cg-text-muted)]">
-        Need access? Contact your marketplace administrator.
-      </p>
-
-      <p className="mt-4 text-center text-[11px] text-[var(--cg-text-muted)]">
-        Demo only — try an email containing &quot;seller&quot; or &quot;admin&quot; to preview that
-        workspace, any password.
-      </p>
+      {isAdministratorLogin ? (
+        <Link href="/login" className="mt-8 block text-center text-[12.5px] font-semibold text-[var(--cg-purple)]">
+          Join as reviewer or seller
+        </Link>
+      ) : (
+        <>
+          <p className="mt-8 text-center text-[12px] text-[var(--cg-text-muted)]">
+            Need access? Contact your marketplace administrator.
+          </p>
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <Button variant="secondary" type="button" onClick={() => setRequestRole("SELLER_OPERATOR")}>Join as seller</Button>
+            <Button variant="secondary" type="button" onClick={() => setRequestRole("CATALOG_REVIEWER")}>Join as reviewer</Button>
+          </div>
+          <Link
+            href="/admin/access-requests"
+            className="mt-4 block text-center text-[12.5px] font-semibold text-[var(--cg-purple)]"
+          >
+            Administrator portal
+          </Link>
+          <p className="mt-1 text-center text-[11px] text-[var(--cg-text-muted)]">
+            Administrators sign in here to review access requests.
+          </p>
+        </>
+      )}
+      {requestRole ? <AccessRequestModal role={requestRole} open onClose={() => setRequestRole(null)} /> : null}
     </AuthSplitLayout>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={(
+        <AuthSplitLayout>
+          <h1 className="text-[22px] font-semibold text-[var(--cg-text-primary)]">Loading sign in...</h1>
+          <p className="mt-1 text-[13px] text-[var(--cg-text-secondary)]">
+            Preparing the secure authentication form.
+          </p>
+        </AuthSplitLayout>
+      )}
+    >
+      <LoginPageContent />
+    </Suspense>
   );
 }
