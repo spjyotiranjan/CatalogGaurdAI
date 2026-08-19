@@ -12,6 +12,7 @@ describe("client-safe error responses", () => {
         code: "AUTHORIZATION_DENIED",
         message: "You are not authorized.",
         status: 403,
+        details: { dependency: "mongodb", errorCode: "ECONNREFUSED" },
       }),
       correlationId,
       "test.operation",
@@ -23,6 +24,7 @@ describe("client-safe error responses", () => {
       code: "AUTHORIZATION_DENIED",
       correlationId,
       retryable: false,
+      details: { dependency: "mongodb", errorCode: "ECONNREFUSED" },
     });
   });
 

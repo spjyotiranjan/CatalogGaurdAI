@@ -25,6 +25,24 @@ function requestAddress(request: Request): string {
   );
 }
 
+function rootAuthenticationErrorType(error: unknown): string | null {
+  if (!error || typeof error !== "object") {
+    return null;
+  }
+  const value = error as { cause?: unknown; name?: unknown };
+  const cause = value.cause;
+  if (cause && typeof cause === "object") {
+    const nested = cause as { err?: unknown; name?: unknown };
+    if (nested.err && typeof nested.err === "object" && "name" in nested.err && typeof nested.err.name === "string") {
+      return nested.err.name;
+    }
+    if (typeof nested.name === "string") {
+      return nested.name;
+    }
+  }
+  return typeof value.name === "string" ? value.name : null;
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: environment.AUTH_SECRET,
   trustHost: environment.AUTH_TRUST_HOST,
@@ -146,6 +164,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       logger.error("Authentication framework error", {
         operation: "auth.framework",
         outcomeCode: error.name,
+        rootErrorType: rootAuthenticationErrorType(error),
       });
     },
     warn(code) {

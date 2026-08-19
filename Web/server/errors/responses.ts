@@ -76,6 +76,7 @@ export function errorResponse(
         correlationId,
         retryable: appError.retryable,
         ...(appError.fieldErrors ? { fieldErrors: appError.fieldErrors } : {}),
+        ...(appError.details ? { details: appError.details } : {}),
       },
     },
     {

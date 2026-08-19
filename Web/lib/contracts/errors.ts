@@ -26,6 +26,7 @@ export const errorCodeSchema = z.enum([
 export type ErrorCode = z.infer<typeof errorCodeSchema>;
 
 export const fieldErrorsSchema = z.record(z.string(), z.array(z.string())).optional();
+export const diagnosticDetailsSchema = z.record(z.string(), z.string()).optional();
 
 export const errorEnvelopeSchema = z
   .object({
@@ -36,6 +37,7 @@ export const errorEnvelopeSchema = z
         correlationId: z.uuid(),
         retryable: z.boolean(),
         fieldErrors: fieldErrorsSchema,
+        details: diagnosticDetailsSchema,
       })
       .strict(),
   })
@@ -49,6 +51,7 @@ type AppErrorOptions = {
   status: number;
   retryable?: boolean;
   fieldErrors?: Record<string, string[]>;
+  details?: Record<string, string>;
   cause?: unknown;
 };
 
@@ -57,6 +60,7 @@ export class AppError extends Error {
   readonly status: number;
   readonly retryable: boolean;
   readonly fieldErrors?: Record<string, string[]>;
+  readonly details?: Record<string, string>;
 
   constructor(options: AppErrorOptions) {
     super(options.message, { cause: options.cause });
@@ -65,6 +69,7 @@ export class AppError extends Error {
     this.status = options.status;
     this.retryable = options.retryable ?? false;
     this.fieldErrors = options.fieldErrors;
+    this.details = options.details;
   }
 }
 

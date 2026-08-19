@@ -48,7 +48,58 @@ function componentSchema(schema: z.ZodType, io: "input" | "output" = "output"): 
     io,
   }) as JsonObject;
   delete jsonSchema.$schema;
-  return jsonSchema;
+  return inlineLocalDefinitions(jsonSchema);
+}
+
+/**
+ * Swagger UI's current ApiDOM resolver does not resolve Zod's local recursive
+ * `#/$defs/...` references when a schema is nested under components.schemas.
+ *
+ * The affected definition is produced by z.json(). For documentation, a
+ * recursive reference encountered while inlining is represented by `{}` — the
+ * OpenAPI schema for an arbitrary JSON value. Runtime Zod validation remains
+ * strict and unchanged.
+ */
+function inlineLocalDefinitions(schema: JsonObject): JsonObject {
+  const definitions = isJsonObject(schema.$defs) ? schema.$defs : {};
+  const resolving = new Set<string>();
+
+  const resolve = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(resolve);
+    if (!isJsonObject(value)) return value;
+
+    const reference = value.$ref;
+    if (typeof reference === "string" && reference.startsWith("#/$defs/")) {
+      const definitionName = reference.slice("#/$defs/".length);
+      const definition = definitions[definitionName];
+      const siblings = Object.fromEntries(
+        Object.entries(value)
+          .filter(([key]) => key !== "$ref")
+          .map(([key, child]) => [key, resolve(child)]),
+      );
+
+      if (!isJsonObject(definition) || resolving.has(definitionName)) {
+        return siblings;
+      }
+
+      resolving.add(definitionName);
+      const resolvedDefinition = resolve(definition);
+      resolving.delete(definitionName);
+      return { ...(isJsonObject(resolvedDefinition) ? resolvedDefinition : {}), ...siblings };
+    }
+
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([key]) => key !== "$defs")
+        .map(([key, child]) => [key, resolve(child)]),
+    );
+  };
+
+  return resolve(schema) as JsonObject;
+}
+
+function isJsonObject(value: unknown): value is JsonObject {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 const credentialsCallbackSchema = loginCredentialsSchema.extend({
@@ -162,7 +213,7 @@ export function createOpenApiDocument(): OpenApiDocument {
               dependencies: { mongodb: "ready" },
             }),
             "503": errorResponse(
-              "A required dependency is unavailable.",
+              "MongoDB is unavailable. The response identifies the dependency and includes a safe diagnostic error code.",
               "DEPENDENCY_UNAVAILABLE",
               true,
             ),

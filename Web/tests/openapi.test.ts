@@ -78,6 +78,8 @@ describe("Web OpenAPI documentation", () => {
     );
     expect(schemas.AccountResponse.additionalProperties).toBe(false);
     expect(schemas.PasswordChangeRequest.additionalProperties).toBe(false);
+    expect(JSON.stringify(schemas)).not.toContain("#/$defs/");
+    expect(JSON.stringify(schemas)).not.toContain('"$defs"');
   });
 
   it("documents session and same-origin security on protected account operations", () => {

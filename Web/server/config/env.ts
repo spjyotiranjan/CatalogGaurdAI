@@ -9,6 +9,31 @@ const booleanFromEnvironment = z
 const integerFromEnvironment = (minimum: number, maximum: number) =>
   z.coerce.number().int().min(minimum).max(maximum);
 
+const ipv4Address = z.string().refine(
+  (value) => {
+    const octets = value.split(".");
+    return (
+      octets.length === 4 &&
+      octets.every(
+        (octet) => /^\d{1,3}$/.test(octet) && Number(octet) <= 255,
+      )
+    );
+  },
+  "Must be an IPv4 address",
+);
+
+const dnsServersFromEnvironment = z
+  .string()
+  .trim()
+  .transform((value) => value.split(",").map((server) => server.trim()))
+  .pipe(
+    z
+      .array(ipv4Address)
+      .min(1)
+      .max(4),
+  )
+  .optional();
+
 const environmentSchema = z
   .object({
     CATALOGGUARD_ENVIRONMENT: z.enum(["development", "test", "staging", "production"]),
@@ -24,6 +49,7 @@ const environmentSchema = z
     MONGODB_DB_NAME: z.string().trim().regex(/^[A-Za-z0-9_-]{1,63}$/),
     MONGODB_CONNECT_TIMEOUT_MS: integerFromEnvironment(500, 60_000),
     MONGODB_MAX_POOL_SIZE: integerFromEnvironment(1, 100),
+    MONGODB_DNS_SERVERS: dnsServersFromEnvironment,
     AUTH_SECRET: z.string().min(32),
     AUTH_URL: z.url().refine(
       (value) => value.startsWith("http://") || value.startsWith("https://"),
@@ -138,6 +164,7 @@ function rawEnvironment() {
     MONGODB_DB_NAME: process.env.MONGODB_DB_NAME ?? "catalogguard",
     MONGODB_CONNECT_TIMEOUT_MS: process.env.MONGODB_CONNECT_TIMEOUT_MS ?? "5000",
     MONGODB_MAX_POOL_SIZE: process.env.MONGODB_MAX_POOL_SIZE ?? "10",
+    MONGODB_DNS_SERVERS: process.env.MONGODB_DNS_SERVERS,
     AUTH_SECRET: process.env.AUTH_SECRET,
     AUTH_URL: process.env.AUTH_URL,
     AUTH_TRUST_HOST: process.env.AUTH_TRUST_HOST ?? "true",
