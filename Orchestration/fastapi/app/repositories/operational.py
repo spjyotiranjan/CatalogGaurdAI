@@ -51,7 +51,7 @@ class OperationalRepository:
         finally:
             await connection.close()
 
-    SCHEMA_VERSION = 1
+    SCHEMA_VERSION = 2
 
     async def migrate(self) -> None:
         """Apply the explicitly invoked, forward-only operational schema migration."""
@@ -111,6 +111,21 @@ class OperationalRepository:
                 );
                 CREATE INDEX IF NOT EXISTS queue_messages_available
                     ON queue_messages(status, available_at);
+
+                CREATE TABLE IF NOT EXISTS operational_row_results (
+                    job_id TEXT NOT NULL REFERENCES operational_jobs(job_id),
+                    source_row_number INTEGER NOT NULL CHECK (source_row_number >= 1),
+                    candidate_identity TEXT NOT NULL,
+                    outcome TEXT NOT NULL CHECK (outcome IN ('ACCEPTED', 'FAILED')),
+                    normalized_candidate TEXT,
+                    error_summary TEXT,
+                    mapping_version TEXT NOT NULL,
+                    raw_row_hash TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    PRIMARY KEY (job_id, source_row_number)
+                );
+                CREATE INDEX IF NOT EXISTS operational_row_results_job_outcome
+                    ON operational_row_results(job_id, outcome, source_row_number);
                 """
             )
             await connection.execute(
@@ -260,3 +275,92 @@ class OperationalRepository:
             )
             row = await cursor.fetchone()
             return int(row[0]) if row is not None else 0
+
+    async def claim_for_processing(self, job_id: UUID) -> OperationalJob | None:
+        now = datetime.now(UTC).isoformat()
+        async with self._connection() as connection:
+            await connection.execute("BEGIN IMMEDIATE")
+            row = await connection.execute_fetchall(
+                "SELECT * FROM operational_jobs WHERE job_id = ?", (str(job_id),)
+            )
+            if not row or row[0]["status"] in {"COMPLETED", "FAILED", "CANCELLED"}:
+                await connection.commit()
+                return None
+            await connection.execute(
+                "UPDATE operational_jobs SET status='PROCESSING', "
+                "attempt_count=attempt_count+1, updated_at=? WHERE job_id=?",
+                (now, str(job_id)),
+            )
+            await connection.commit()
+        return await self.get_job(job_id)
+
+    async def record_row(
+        self,
+        *,
+        job_id: UUID,
+        source_row_number: int,
+        candidate_identity: str,
+        outcome: str,
+        normalized_candidate: str | None,
+        error_summary: str | None,
+        mapping_version: str,
+        raw_row_hash: str,
+    ) -> bool:
+        now = datetime.now(UTC).isoformat()
+        async with self._connection() as connection:
+            await connection.execute("BEGIN IMMEDIATE")
+            cursor = await connection.execute(
+                "INSERT OR IGNORE INTO operational_row_results("
+                "job_id, source_row_number, candidate_identity, outcome, normalized_candidate, "
+                "error_summary, mapping_version, raw_row_hash, created_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    str(job_id),
+                    source_row_number,
+                    candidate_identity,
+                    outcome,
+                    normalized_candidate,
+                    error_summary,
+                    mapping_version,
+                    raw_row_hash,
+                    now,
+                ),
+            )
+            if cursor.rowcount:
+                accepted = 1 if outcome == "ACCEPTED" else 0
+                rejected = 1 if outcome == "FAILED" else 0
+                await connection.execute(
+                    "UPDATE operational_jobs SET processed_rows=processed_rows+1, "
+                    "last_checkpoint=?, updated_at=? WHERE job_id=?",
+                    (f"row:{source_row_number}", now, str(job_id)),
+                )
+                if accepted or rejected:
+                    await connection.execute(
+                        "UPDATE operational_jobs SET updated_at=? WHERE job_id=?",
+                        (now, str(job_id)),
+                    )
+            await connection.commit()
+            return cursor.rowcount == 1
+
+    async def finish_processing(self, *, job_id: UUID, total_rows: int) -> OperationalJob:
+        now = datetime.now(UTC).isoformat()
+        async with self._connection() as connection:
+            await connection.execute(
+                "UPDATE operational_jobs SET status='COMPLETED', total_rows=?, "
+                "last_checkpoint=COALESCE(last_checkpoint, 'header'), updated_at=? WHERE job_id=?",
+                (total_rows, now, str(job_id)),
+            )
+            await connection.commit()
+        job = await self.get_job(job_id)
+        if job is None:
+            raise RuntimeError("Operational job disappeared during completion")
+        return job
+
+    async def fail_processing(self, *, job_id: UUID, code: str) -> None:
+        async with self._connection() as connection:
+            await connection.execute(
+                "UPDATE operational_jobs SET status='FAILED', safe_failure_code=?, "
+                "updated_at=? WHERE job_id=?",
+                (code, datetime.now(UTC).isoformat(), str(job_id)),
+            )
+            await connection.commit()

@@ -11,6 +11,7 @@ import { connectToDatabase, disconnectFromDatabase } from "@/server/db/mongoose"
 import { runDatabaseMigrations } from "@/server/migrations/runner";
 import { AuditLogModel } from "@/server/models/audit-log";
 import { ServiceMessageNonceModel } from "@/server/models/service-message-nonce";
+import { FeedUploadModel } from "@/server/models/feed-upload";
 import { canonicalOrchestrationMessage, signOrchestrationMessage } from "@/server/integrations/orchestration/signing";
 
 const contractRoot = fileURLToPath(new URL("../../Orchestration/contracts/v1/", import.meta.url));
@@ -79,6 +80,28 @@ describe("Phase 1 Orchestration bridge", () => {
   it("accepts Orchestration's signed fixture once, audits it, and rejects a replay", async () => {
     const fixture = await readFile(`${fixtureRoot}validation-job-result.v1.json`, "utf8");
     const result = validationJobResultSchema.parse(JSON.parse(fixture));
+    await FeedUploadModel.create({
+      _id: result.feedUploadId,
+      sellerId: result.sellerId,
+      uploadedByUserId: "66bb4f8b683bb83a83c26110",
+      fileName: "fixture.csv",
+      storageObjectKey: "feeds/fixture.csv",
+      fileType: "CSV",
+      feedType: "PRODUCT_LISTING",
+      checksum: result.checksum,
+      fileSizeBytes: 100,
+      mappingVersion: "catalog-map/v1",
+      processingStatus: "PROCESSING",
+      dispatchState: "ACCEPTED",
+      jobId: result.jobId,
+      idempotencyKey: result.idempotencyKey,
+      correlationId: result.execution.correlationId,
+      processedRows: 0,
+      acceptedRows: 0,
+      rejectedRows: 0,
+      totalRows: null,
+      processedAt: null,
+    } as never);
     const body = new TextEncoder().encode(fixture);
     const timestamp = Math.floor(Date.now() / 1_000);
     const nonce = "11111111-1111-4111-8111-111111111111";
@@ -104,7 +127,7 @@ describe("Phase 1 Orchestration bridge", () => {
 
     const first = await acceptValidationResult(new Request("http://localhost:3000/api/internal/validation-results", { method: "POST", headers, body: fixture }));
     expect(first.status).toBe(204);
-    expect(await AuditLogModel.exists({ action: "ORCHESTRATION_CALLBACK_CONTRACT_ACCEPTED", entityId: result.feedUploadId })).toBeTruthy();
+    expect(await AuditLogModel.exists({ action: "ORCHESTRATION_CALLBACK_ACCEPTED", entityId: result.feedUploadId })).toBeTruthy();
     expect(await ServiceMessageNonceModel.exists({ nonce })).toBeTruthy();
 
     const replay = await acceptValidationResult(new Request("http://localhost:3000/api/internal/validation-results", { method: "POST", headers, body: fixture }));

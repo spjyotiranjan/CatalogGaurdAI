@@ -22,6 +22,9 @@ const expectedPaths = [
   "/api/auth/signin",
   "/api/auth/signout",
   "/api/docs",
+  "/api/feeds",
+  "/api/feeds/{id}",
+  "/api/feeds/{id}/download",
   "/api/health",
   "/api/internal/bootstrap/admin",
   "/api/internal/validation-results",
@@ -67,10 +70,16 @@ describe("Web OpenAPI documentation", () => {
         "CreateAccessRequest",
         "BootstrapAdmin",
         "ValidationJobResultV1",
+        "CreateFeedResponse",
+        "FeedListResponse",
+        "FeedDetailResponse",
+        "FeedDownloadResponse",
       ]),
     );
     expect(schemas.AccountResponse.additionalProperties).toBe(false);
     expect(schemas.PasswordChangeRequest.additionalProperties).toBe(false);
+    expect(JSON.stringify(schemas)).not.toContain("#/$defs/");
+    expect(JSON.stringify(schemas)).not.toContain('"$defs"');
   });
 
   it("documents session and same-origin security on protected account operations", () => {

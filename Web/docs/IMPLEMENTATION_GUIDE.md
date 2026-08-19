@@ -64,6 +64,10 @@ Before any live feed work, Web and Orchestration share strict `ValidationJobRequ
 
 Real local-development and production feed flows both use private Cloudflare R2. `.env.local` selects the dedicated local-development bucket; `.env.prod` selects the separate production bucket. The corresponding Web and Orchestration environment files target the same bucket for that environment with separate least-privilege credentials. Fake object storage is permitted only inside automated tests.
 
+### Phase 2 feed bridge
+
+`POST /api/feeds` accepts an authenticated seller's CSV only after same-origin, CSV type/name, bounded size, basic-header, and checksum checks. Web writes one immutable private object and `FEED_UPLOAD`, records its job/idempotency/correlation identity, then signs `POST /internal/v1/jobs`. Orchestration rechecks the object and streams/checkpoints normalized rows. Web's signed callback updates only feed status/counters in this phase; product/source/issue/AI effects remain forbidden until Phase 3.
+
 ## UX implementation requirements
 
 The supplied visual design defines a sober operational console: dark role rail, neutral work surface, large clear page headers, semantic status colors, metric cards, tables, a processing timeline, and explicitly separated AI advisory panels.

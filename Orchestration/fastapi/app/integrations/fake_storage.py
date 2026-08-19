@@ -1,3 +1,5 @@
+import hashlib
+from collections.abc import AsyncIterator
 from pathlib import Path
 
 from app.core.errors import AppError
@@ -50,3 +52,30 @@ class FakePrivateStorageClient:
                 message="The private object could not be read.",
                 status_code=404,
             ) from error
+
+    async def stream(
+        self,
+        storage_object_key: str,
+        expected_size: int | None = None,
+        expected_checksum: str | None = None,
+    ) -> AsyncIterator[bytes]:
+        content = await self.read_fixture(storage_object_key, max_bytes=1_048_576)
+        if expected_size is not None and len(content) != expected_size:
+            raise AppError(
+                category="validation",
+                code="PRIVATE_OBJECT_MISMATCH",
+                message="The private object does not match its trusted metadata.",
+                status_code=422,
+            )
+        if (
+            expected_checksum is not None
+            and hashlib.sha256(content).hexdigest() != expected_checksum
+        ):
+            raise AppError(
+                category="validation",
+                code="PRIVATE_OBJECT_MISMATCH",
+                message="The private object does not match its trusted metadata.",
+                status_code=422,
+            )
+        for offset in range(0, len(content), 64 * 1024):
+            yield content[offset : offset + 64 * 1024]

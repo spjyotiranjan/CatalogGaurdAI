@@ -13,12 +13,17 @@ export async function GET(request: Request) {
   const { correlationId } = requestCorrelationContext(request);
 
   try {
-    if (!(await checkDatabaseReadiness())) {
+    const databaseReadiness = await checkDatabaseReadiness();
+    if (!databaseReadiness.ready) {
       throw new AppError({
         code: "DEPENDENCY_UNAVAILABLE",
-        message: "A required dependency is unavailable.",
+        message: "The MongoDB dependency is unavailable.",
         status: 503,
         retryable: true,
+        details: {
+          dependency: "mongodb",
+          ...databaseReadiness.diagnostic,
+        },
       });
     }
 

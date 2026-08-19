@@ -17,14 +17,13 @@ os.environ.update(
         "CATALOGGUARD_SERVICE_VERSION": "test",
         "CATALOGGUARD_OPERATIONAL_DB_PATH": ".data/import-test.db",
         "CATALOGGUARD_FAKE_STORAGE_ROOT": ".data/import-fake-storage",
+        "CATALOGGUARD_PRIVATE_STORAGE_BACKEND": "fake",
         "CATALOGGUARD_WEB_SERVICE_ID": "web-bff",
         "CATALOGGUARD_WEB_SERVICE_KEY_VERSION": "web-k1",
         "CATALOGGUARD_WEB_SERVICE_SECRET": "web-test-secret-with-at-least-32-characters",
         "CATALOGGUARD_CALLBACK_SERVICE_ID": "validation-orchestrator",
         "CATALOGGUARD_CALLBACK_KEY_VERSION": "orchestration-k1",
-        "CATALOGGUARD_CALLBACK_SIGNING_SECRET": (
-            "callback-test-secret-at-least-32-characters"
-        ),
+        "CATALOGGUARD_CALLBACK_SIGNING_SECRET": ("callback-test-secret-at-least-32-characters"),
     }
 )
 
@@ -46,6 +45,7 @@ def settings(tmp_path: Path) -> Settings:
         log_level="INFO",
         operational_db_path=tmp_path / "operational.db",
         fake_storage_root=tmp_path / "private-storage",
+        private_storage_backend="fake",
         web_service_id="web-bff",
         web_service_key_version="web-k1",
         web_service_secret=TEST_WEB_SECRET,

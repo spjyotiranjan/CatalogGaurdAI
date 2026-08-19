@@ -1,0 +1,20 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Dropzone } from "@/components/feed/Dropzone";
+import { Alert } from "@/components/ui/Cards";
+import { Button } from "@/components/ui/Button";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { useToast } from "@/components/ui/LiveRegion";
+import { createFeedResponseSchema } from "@/lib/contracts/feeds";
+import { errorEnvelopeSchema } from "@/lib/contracts/errors";
+
+function formatSize(bytes: number): string { if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(bytes < 1024 * 10 ? 1 : 0)} KB`; if (bytes < 1024 ** 3) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`; return `${(bytes / (1024 ** 3)).toFixed(2)} GB`; }
+
+export function FeedUploadClient() {
+  const router = useRouter(); const { announce } = useToast(); const [file, setFile] = useState<File | null>(null); const [error, setError] = useState<string | null>(null); const [submitting, setSubmitting] = useState(false);
+  const choose = (next: File) => { setError(null); if (!next.name.toLowerCase().endsWith(".csv")) { setFile(null); setError("Choose a CSV file. Other formats are not accepted."); return; } setFile(next); };
+  async function submit() { if (!file || submitting) return; setSubmitting(true); setError(null); try { const form = new FormData(); form.set("file", file); const response = await fetch("/api/feeds", { method: "POST", body: form, headers: { origin: window.location.origin } }); const body: unknown = await response.json(); if (!response.ok) { const parsed = errorEnvelopeSchema.safeParse(body); throw new Error(parsed.success ? parsed.data.error.fieldErrors?.file?.[0] ?? parsed.data.error.message : "The upload could not be submitted."); } const result = createFeedResponseSchema.parse(body); announce("Feed stored and sent for validation.", "success"); router.push(`/seller/feeds/${result.data.id}`); } catch (cause) { setError(cause instanceof Error ? cause.message : "The upload could not be submitted."); } finally { setSubmitting(false); } }
+  return <div className="max-w-5xl"><p className="mb-5 text-[13px] text-[var(--cg-text-secondary)]">Upload one CSV product listing. It is stored privately before a validation job is sent to Orchestration.</p><div className="grid grid-cols-[1fr_320px] gap-5"><section className="rounded-[12px] border border-[var(--cg-border)] bg-white p-6"><p className="mb-3 text-[13px] font-semibold">Upload product feed</p><Dropzone onFileSelected={choose} disabled={submitting} />{file ? <div className="mt-4 flex items-center justify-between gap-4 rounded-[10px] border border-[var(--cg-border)] px-4 py-3"><div className="min-w-0"><p className="truncate text-[13px] font-medium">{file.name}</p><p className="cg-mono text-[11.5px] text-[var(--cg-text-muted)]">{formatSize(file.size)} selected</p></div><div className="flex shrink-0 items-center gap-3"><StatusBadge tone="ready">Selected</StatusBadge><button type="button" onClick={() => { setFile(null); setError(null); }} disabled={submitting} className="font-semibold text-[var(--cg-blue)] hover:underline disabled:opacity-60">Remove</button></div></div> : null}{error ? <div className="mt-4"><Alert tone="danger" title="Upload was not completed">{error}</Alert></div> : null}</section><aside className="rounded-[12px] border border-[var(--cg-border)] bg-white p-6"><p className="mb-2 text-[13px] font-semibold">Phase 2 intake</p><ul className="flex flex-col gap-2 text-[12px] text-[var(--cg-text-secondary)]"><li>CSV product listings only.</li><li>Files are isolated to your seller workspace.</li><li>Checksum and size are verified by the backend.</li><li>Validation starts after job acceptance.</li></ul><Button fullWidth className="mt-5" disabled={!file || submitting} onClick={() => void submit()}>{submitting ? "Uploading…" : "Upload feed"}</Button><Button fullWidth variant="secondary" className="mt-3" onClick={() => router.push("/seller/feeds")}>View feed history</Button></aside></div></div>;
+}

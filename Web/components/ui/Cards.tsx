@@ -1,7 +1,13 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils/cn";
-import type { MetricCardData } from "@/lib/fixtures/metrics";
 import { Button } from "@/components/ui/Button";
+
+export interface MetricCardData {
+  label: string;
+  value: string;
+  delta?: string;
+  tone?: "neutral" | "positive" | "warning" | "negative";
+}
 
 const TONE_ACCENT: Record<NonNullable<MetricCardData["tone"]>, string> = {
   neutral: "var(--cg-purple)",

@@ -1,0 +1,15 @@
+sku,product title,product description,price,sale_price,stock
+valid-001,  Compact   Speaker  ,Portable Bluetooth speaker,49.99,39.99,15
+valid-002,USB-C Dock,Docking station with HDMI and ethernet,129.5000,,0
+missing-title-001,,Title is deliberately blank,14.99,,8
+decimal-comma-001,Ambiguous Decimal,"This price uses a comma",,"10,25",5
+scientific-price-001,Scientific Price,Scientific notation is not supported,1e3,,2
+invalid-price-001,Invalid Price,Text is not a decimal,twenty,,2
+negative-stock-001,Negative Stock,Negative quantity is rejected,24.00,,-1
+fraction-stock-001,Fractional Stock,Fractional quantity is rejected,24.00,,1.5
+valid-003,Desk Fan,USB desk fan,18.75,,3
+valid-004,Screen Cleaner,Alcohol free screen cleaner,9.50,7.50,20
+blank-sku-001, ,SKU is deliberately blank,8.00,,4
+valid-005,Travel Adapter,Universal travel adapter,34.00,,11
+valid-006,Cable Organizer,Reusable cable ties,6.25,,200
+valid-007,Portable SSD,One terabyte portable SSD,119.99,99.99,6

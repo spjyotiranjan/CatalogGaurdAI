@@ -55,6 +55,10 @@ The idempotency key maps to exactly one logical job/result. Store attempt count,
 
 The first parser supports CSV only. For every real workflow, read the job-granted object from Cloudflare R2 through a scoped, read-only adapter. `.env.local` selects the isolated local-development bucket and `.env.prod` selects the isolated production bucket. Before parsing, verify object identity, file size, signature/MIME where available, declared checksum, and mapping version. Parse as streams/batches, not a complete unbounded in-memory file. The Phase 1 fake adapter is retained only for unit, contract, and isolated integration tests.
 
+### Phase 2 implementation boundary
+
+The R2 adapter reads a job-granted object only and checks its bounded byte count and SHA-256 checksum. `CsvIngestionService` consumes chunks, maps `catalog-map/v1`, and commits each row outcome and safe checkpoint to the operational store. These are operational row results, not Web canonical records; deterministic rules, callbacks, and product/issue application remain later responsibilities.
+
 For each row return or retain:
 
 - `sourceRowNumber`: 1-based, stable original row number;

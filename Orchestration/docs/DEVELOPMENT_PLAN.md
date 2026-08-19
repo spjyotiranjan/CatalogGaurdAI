@@ -56,6 +56,17 @@ The matching Web bridge consumes the committed v1 result fixture and D-012 signa
 
 **Exit criteria:** A feed of bounded batches produces deterministic source-row results; bad rows do not hide good ones; full-file failure is terminal and safe; repeated processing resumes from a recorded checkpoint; CSV is the only enabled format.
 
+### Phase 2 completion record - 2026-08-18
+
+**Status:** Complete.
+
+- Replaced non-test storage wiring with a scoped read-only R2 adapter. It accepts only signed job-granted keys, rejects traversal, bounds reads, verifies object checksum, and keeps storage details out of contracts and logs; fake storage is test-only.
+- Added operational schema v2 with a unique `(jobId, sourceRowNumber)` ledger and atomic progress/checkpoint writes. Repeated processing skips committed rows rather than duplicating them.
+- Added streaming `catalog-map/v1` CSV ingestion: stable source row numbers, raw-row hashes, safe independent row errors, whitespace/identifier/currency/decimal/integer normalization, preserved numeric zero, and rejected ambiguous decimals.
+- Canonical product/issue effects, callback delivery, and approval authority remain later phases.
+
+**Verification evidence:** `uv run ruff check app tests` and `uv run pytest --basetemp .pytest-phase2` pass (45 tests).
+
 ## Phase 3 - Deterministic rule engine and validation result
 
 **Goal:** Make FastAPI the authoritative deterministic validation service.

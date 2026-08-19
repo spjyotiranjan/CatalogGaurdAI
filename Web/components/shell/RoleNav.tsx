@@ -44,7 +44,8 @@ export function RoleNav({ user }: { user: SessionUser }) {
 
       <ul className="flex flex-1 flex-col gap-0.5 px-3">
         {items.map((item) => {
-          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const hasExactMatch = items.some((candidate) => candidate.href === pathname);
+          const active = pathname === item.href || (!hasExactMatch && pathname.startsWith(`${item.href}/`));
           return (
             <li key={item.href}>
               <Link
