@@ -1,5 +1,5 @@
 import { forwardRef, useId } from "react";
-import type { InputHTMLAttributes } from "react";
+import type { InputHTMLAttributes, SelectHTMLAttributes } from "react";
 import { cn } from "@/lib/utils/cn";
 
 interface TextFieldProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -76,5 +76,65 @@ export const CheckboxField = forwardRef<HTMLInputElement, CheckboxFieldProps>(fu
       />
       {label}
     </label>
+  );
+});
+
+interface SelectOption {
+  value: string;
+  label: string;
+}
+
+interface SelectFieldProps extends SelectHTMLAttributes<HTMLSelectElement> {
+  label: string;
+  options: SelectOption[];
+  error?: string;
+  hint?: string;
+}
+
+export const SelectField = forwardRef<HTMLSelectElement, SelectFieldProps>(function SelectField(
+  { label, options, error, hint, id, className, ...props },
+  ref
+) {
+  const autoId = useId();
+  const fieldId = id ?? autoId;
+  const errorId = `${fieldId}-error`;
+  const hintId = `${fieldId}-hint`;
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={fieldId} className="text-[13px] font-medium text-[var(--cg-text-secondary)]">
+        {label}
+      </label>
+      <select
+        ref={ref}
+        id={fieldId}
+        aria-invalid={Boolean(error)}
+        aria-describedby={error ? errorId : hint ? hintId : undefined}
+        className={cn(
+          "h-11 rounded-[10px] border bg-white px-3.5 text-[14px] text-[var(--cg-text-primary)]",
+          "outline-none transition-colors cursor-pointer",
+          error
+            ? "border-[var(--cg-red)] focus:border-[var(--cg-red)]"
+            : "border-[var(--cg-border-strong)] focus:border-[var(--cg-purple)]",
+          className
+        )}
+        {...props}
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      {error ? (
+        <p id={errorId} className="text-[12.5px] text-[var(--cg-red)]">
+          {error}
+        </p>
+      ) : hint ? (
+        <p id={hintId} className="text-[12.5px] text-[var(--cg-text-muted)]">
+          {hint}
+        </p>
+      ) : null}
+    </div>
   );
 });
