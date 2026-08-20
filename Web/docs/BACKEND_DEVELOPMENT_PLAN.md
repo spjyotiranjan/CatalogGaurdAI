@@ -114,14 +114,16 @@ Every phase must reconcile `/api/openapi.json` and `/api/docs` with its implemen
 **Goal:** Convert validated results into versioned, seller-scoped catalog data.
 
 - Implement product aggregate/detail schemas, source-detail linkage, unique/index constraints, Decimal128 price handling, integer inventory invariants, mapping/rule-version traceability, and D-004 workflow-state migration.
-- Atomically apply validated callback results to source detail, product/version details, validation issues, AI-analysis history, feed counters, workflow records, and audit events. Make duplicate result delivery harmless.
+- Establish the Phase 3 live-result path: accept one bounded, non-chunked signed result per completed job, verify its persisted job/feed/checksum/idempotency identity, and atomically apply it to source detail, product/version details, validation issues, feed counters, workflow records, and audit events. Make duplicate delivery harmless. AI-analysis history remains Phase 5 work.
+- Define canonical product identity and reconciliation before application: seller-scoped external product identifier/SKU constraints, concurrent-feed ordering, version creation, and explicit no-delete behavior for products absent from a feed.
+- Provide Orchestration the bounded, versioned category and rule context needed for deterministic validation; Web remains the authoritative category and rule-configuration owner.
 - Implement scoped product/feed/issue queries, stable pagination/filtering/search, and safe export job creation with formula-injection protection.
 - Enforce verified-session authentication and role/seller-scope authorization at both route and domain-service boundaries for every catalog, issue, correction, revalidation, and export operation.
 - Implement correction drafts and save-and-revalidate as distinct idempotent domain actions. Require current product version and create a new version rather than mutating raw evidence.
 - Reconcile recurring/obsolete findings through issue lifecycle updates and dispatch revalidation only after correction data is committed.
 - Reconcile Swagger/OpenAPI for every Phase 3 catalog, issue, correction, revalidation, result-application, request/response, and error contract.
 
-**Exit criteria:** Canonical result application is atomic/idempotent; protected reads and mutations remain authenticated and tenant-scoped; product versions cannot cross sellers or overwrite newer data; corrections preserve immutable evidence; data invariants and callback failure paths have integration tests.
+**Exit criteria:** A real uploaded feed reaches a signed, bounded deterministic result and is applied atomically/idempotently; protected reads and mutations remain authenticated and tenant-scoped; product versions cannot cross sellers or overwrite newer data; corrections preserve immutable evidence; data invariants and callback failure paths have integration tests.
 
 ## Phase 4 - Review, workflow, customer readiness, and governance
 
@@ -133,6 +135,7 @@ Every phase must reconcile `/api/openapi.json` and `/api/docs` with its implemen
 - Implement immutable `REVIEW_DECISION` creation with reauthentication where required, idempotency, current-version conflict check, unresolved error/blocker validation, transaction behavior, and audit.
 - Implement workflow transitions and the atomic customer-readiness gate. Verify active seller, required fields, current approved version, category/pricing/inventory validity, and absence of unresolved error/blocker issues.
 - Implement administrator seller/user/category/rule actions, explicit override reason, and append-only audit-log access.
+- Replace the Phase 3 single-process result path with a durable dispatch/outbox handoff, and retain callback receipts and retry state so completion remains recoverable across Web restarts.
 - Reconcile Swagger/OpenAPI for every Phase 4 review, decision, waiver, workflow, readiness, governance, request/response, and error contract.
 
 **Exit criteria:** Only authenticated, qualified human actors can decide/waive as allowed; stale decisions conflict; approvals do not bypass validation; readiness cannot be set through any route except the gate; all material actions are auditable.

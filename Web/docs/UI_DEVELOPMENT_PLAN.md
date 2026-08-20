@@ -62,6 +62,7 @@ Before implementing or changing a user-facing route, consult the approved [Imple
 
 **Goal:** Present versioned catalog evidence and let sellers prepare safe corrections.
 
+- Depend on the Phase 3 bounded deterministic-result handoff; do not show catalog evidence or correction affordances for feeds that have not received a server-confirmed completed result.
 - Build seller product catalog controls for search, filters, pagination, status badges, issue counts, and export-request affordance using typed screen-state contracts.
 - Build product detail/correction workspace with distinct original source, normalized canonical value, issue evidence, and proposed correction sections.
 - Implement accessible field validation, blocking-error summary, draft-saving feedback, save-and-revalidate confirmation, unsaved-change warning, and stale-version conflict recovery.

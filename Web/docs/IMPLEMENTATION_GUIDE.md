@@ -66,7 +66,7 @@ Real local-development and production feed flows both use private Cloudflare R2.
 
 ### Phase 2 feed bridge
 
-`POST /api/feeds` accepts an authenticated seller's CSV only after same-origin, CSV type/name, bounded size, basic-header, and checksum checks. Web writes one immutable private object and `FEED_UPLOAD`, records its job/idempotency/correlation identity, then signs `POST /internal/v1/jobs`. Orchestration rechecks the object and streams/checkpoints normalized rows. Web's signed callback updates only feed status/counters in this phase; product/source/issue/AI effects remain forbidden until Phase 3.
+`POST /api/feeds` accepts an authenticated seller's CSV only after same-origin, CSV type/name, bounded size, basic-header, and checksum checks. Web writes one immutable private object and `FEED_UPLOAD`, records its job/idempotency/correlation identity, then signs `POST /internal/v1/jobs`. Orchestration rechecks the object and streams/checkpoints normalized rows. Phase 2 stops at persisted intake; Phase 3 adds the first bounded job consumer and one signed non-chunked result. Until then, Web's signed callback updates only feed status/counters and product/source/issue/AI effects remain forbidden.
 
 ## UX implementation requirements
 

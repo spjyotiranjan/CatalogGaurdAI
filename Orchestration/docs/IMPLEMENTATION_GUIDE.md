@@ -57,7 +57,7 @@ The first parser supports CSV only. For every real workflow, read the job-grante
 
 ### Phase 2 implementation boundary
 
-The R2 adapter reads a job-granted object only and checks its bounded byte count and SHA-256 checksum. `CsvIngestionService` consumes chunks, maps `catalog-map/v1`, and commits each row outcome and safe checkpoint to the operational store. These are operational row results, not Web canonical records; deterministic rules, callbacks, and product/issue application remain later responsibilities.
+The R2 adapter reads a job-granted object only and checks its bounded byte count and SHA-256 checksum. `CsvIngestionService` consumes chunks, maps `catalog-map/v1`, and commits each row outcome and safe checkpoint to the operational store. These are operational row results, not Web canonical records. Phase 3 adds deterministic rules plus one bounded, single-process completion callback; Web alone applies canonical products and issues. Queue durability, callback retries, and chunked result delivery remain Phase 4 responsibilities.
 
 For each row return or retain:
 
