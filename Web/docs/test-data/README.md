@@ -10,7 +10,7 @@ Use these files from the seller feed-upload screen. Each file is intentionally u
 
 ## Important current boundary
 
-The upload flow stores a file, creates the job, and sends it to Orchestration. Phase 2 provides the streaming ingestion service, but Phase 4 owns the continuously running worker and automatic result callback. Until that worker is in place, a UI-uploaded feed can stay in `PROCESSING`; use the automated ingestion tests to verify the row-level processing implementation.
+The upload flow stores a file and creates a trusted job. Phase 2 provides the streaming ingestion service, but the first live bounded consumer, deterministic validation, and signed completion callback are Phase 3 work. Until Phase 3 is implemented, a UI-uploaded feed can stay in `PROCESSING`; use the automated ingestion tests to verify the row-level processing implementation.
 
 ## CSV rules exercised here
 

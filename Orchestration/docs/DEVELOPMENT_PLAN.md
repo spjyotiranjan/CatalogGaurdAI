@@ -75,16 +75,18 @@ The matching Web bridge consumes the committed v1 result fixture and D-012 signa
 - Implement the MVP rules: missing required fields, empty title/description, invalid data types, invalid/non-positive price values, negative or invalid inventory, duplicate SKU within upload, unsupported/inactive category, and category-required attribute checks when configured.
 - Add business validations from the entities: decimal-safe price comparison, `salePrice <= listPrice`, integer stock/reserved constraints, derived availability, valid currency, active/assignable category, and source consistency checks.
 - Define finding deduplication key `(product version or candidate identity, fieldPath, ruleId)` and deterministic severity behavior. `ERROR` blocks approval; `BLOCKER` also blocks processing/readiness; no rule approves.
-- Return chunked or callback-ready validated result data with count reconciliation, mapping/rule versions, safe errors, and per-record outcomes.
+- Add the first live execution path: a bounded single-process consumer claims accepted jobs, runs ingestion and deterministic rules, and sends one signed, non-chunked terminal result to Web. Persist the completed/failed result identity before delivery so an immediate redelivery is harmless.
+- Return a bounded, non-chunked validated result with count reconciliation, mapping/rule versions, safe errors, and per-record outcomes. Define the result-size limit explicitly; larger-result chunking remains Phase 4.
+- Obtain only a bounded, versioned taxonomy/rule context from Web's trusted internal boundary. Do not make Orchestration the owner of category or rule configuration.
 - Reconcile Swagger/OpenAPI for every Phase 3 rule, finding, validation-result, request/response, and error contract.
 
-**Exit criteria:** Rules are repeatable for identical input/version; coverage includes each severity and edge case; duplicate SKU and malformed-row behavior are proven; output validates against the shared contract and contains no raw secret/private data.
+**Exit criteria:** A real accepted job is claimed, ingested, deterministically validated, and delivered as one signed bounded result; rules are repeatable for identical input/version; coverage includes each severity and edge case; duplicate SKU and malformed-row behavior are proven; output validates against the shared contract and contains no raw secret/private data.
 
 ## Phase 4 - Reliable workers and Web callback handoff
 
 **Goal:** Make async validation operationally safe at MVP scale.
 
-- Implement durable queue consumption, idempotent job claim, heartbeat, progress, checkpoint, graceful shutdown, bounded retries/backoff, terminal failure, cancellation, and dead-letter path.
+- Replace the Phase 3 single-process consumer with durable queue consumption, idempotent job claim, heartbeat, progress, checkpoint, graceful shutdown, bounded retries/backoff, terminal failure, cancellation, and dead-letter path.
 - Ensure acknowledgement occurs only after the operational checkpoint/state is committed. Limit worker and per-seller concurrency.
 - Add signed callback delivery with timestamp/nonce, exponential retry, response classification, terminal callback failure alerting, and support for idempotent redelivery.
 - Add result-size/chunk strategy if a 1,000-row job cannot safely fit one callback. Completion must reconcile chunk count/checksum before Web exposes a feed as completed.
